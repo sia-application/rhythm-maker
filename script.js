@@ -263,6 +263,26 @@ class Sequencer {
         });
     }
 
+    moveBeat(barIndex, fromIndex, toIndex) {
+        if (!this.bars[barIndex]) return;
+        const bar = this.bars[barIndex];
+        if (fromIndex < 0 || fromIndex >= bar.beats.length) return;
+        if (toIndex < 0 || toIndex >= bar.beats.length) return;
+        if (fromIndex === toIndex) return;
+
+        // Move Beat Definition
+        const [movedBeat] = bar.beats.splice(fromIndex, 1);
+        bar.beats.splice(toIndex, 0, movedBeat);
+
+        // Move Steps in All Tracks
+        bar.tracks.forEach(track => {
+            if (track.pattern.length > fromIndex) {
+                const [movedPattern] = track.pattern.splice(fromIndex, 1);
+                track.pattern.splice(toIndex, 0, movedPattern);
+            }
+        });
+    }
+
     updateBeatSubdivision(barIndex, beatIndex, newSubdiv) {
         if (!this.bars[barIndex]) return;
         const bar = this.bars[barIndex];
@@ -700,6 +720,52 @@ class UI {
             bar.beats.forEach((beat, bIndex) => {
                 const beatHeader = document.createElement('div');
                 beatHeader.className = 'beat-header';
+
+                // DRAG AND DROP
+                beatHeader.draggable = true;
+                beatHeader.addEventListener('dragstart', (e) => {
+                    e.dataTransfer.setData('text/plain', JSON.stringify({
+                        barIndex: barIndex,
+                        beatIndex: bIndex
+                    }));
+                    e.dataTransfer.effectAllowed = 'move';
+                    beatHeader.classList.add('dragging');
+                });
+
+                beatHeader.addEventListener('dragend', () => {
+                    beatHeader.classList.remove('dragging');
+                    document.querySelectorAll('.beat-header').forEach(el => el.classList.remove('drag-over'));
+                });
+
+                beatHeader.addEventListener('dragover', (e) => {
+                    e.preventDefault(); // Essential to allow drop
+                    e.dataTransfer.dropEffect = 'move';
+                    beatHeader.classList.add('drag-over');
+                });
+
+                beatHeader.addEventListener('dragleave', () => {
+                    beatHeader.classList.remove('drag-over');
+                });
+
+                beatHeader.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    beatHeader.classList.remove('drag-over');
+                    const dataStr = e.dataTransfer.getData('text/plain');
+                    if (!dataStr) return;
+
+                    try {
+                        const data = JSON.parse(dataStr);
+                        // Ensure drag is within same bar (simplification)
+                        if (data.barIndex === barIndex && data.beatIndex !== bIndex) {
+                            this.seq.moveBeat(barIndex, data.beatIndex, bIndex);
+                            this.renderGrid();
+                        }
+                    } catch (err) {
+                        console.error("Drop Parse Error", err);
+                    }
+                });
+
+                // End DnD
 
                 const ctrlContainer = document.createElement('div');
                 ctrlContainer.className = 'beat-subdiv-ctrl';

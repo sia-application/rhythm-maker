@@ -355,6 +355,17 @@ main {
     z-index: 10;
 }
 
+.beat-header.dragging {
+    opacity: 0.5;
+    background: rgba(255, 255, 255, 0.1);
+    cursor: grabbing;
+}
+
+.beat-header.drag-over {
+    background: rgba(255, 255, 255, 0.2);
+    border-left: 2px solid var(--primary-color);
+}
+
 .beat-header:hover .beat-del-btn {
     opacity: 1;
 }
