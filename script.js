@@ -909,11 +909,13 @@ class UI {
             // Let's make it span 1 (label) and let beats be empty?
             // Or make it span all.
             const addTrackContainer = document.createElement('div');
-            addTrackContainer.style.gridColumn = '1 / -1'; // Span all
+            addTrackContainer.style.gridColumn = '1 / 2'; // Span only first column (Label column)
             addTrackContainer.style.paddingTop = '5px';
+            addTrackContainer.style.display = 'flex';
+            addTrackContainer.style.justifyContent = 'flex-start';
 
             const addTrackBtn = document.createElement('button');
-            addTrackBtn.innerText = '+ Add Track';
+            addTrackBtn.innerText = '+ Track';
             addTrackBtn.className = 'action-btn';
             addTrackBtn.style.fontSize = '0.8rem';
             addTrackBtn.style.padding = '5px 10px';
@@ -939,8 +941,10 @@ class UI {
         actionContainer.style.justifyContent = 'center';
 
         const addBarBtn = document.createElement('button');
-        addBarBtn.innerText = '+ Add Bar';
+        addBarBtn.innerText = '+ Bar';
         addBarBtn.className = 'action-btn';
+        addBarBtn.style.fontSize = '0.8rem';
+        addBarBtn.style.padding = '5px 10px';
         // Removed inline background to use class style
         addBarBtn.addEventListener('click', () => {
             this.seq.addBar();

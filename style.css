@@ -450,7 +450,8 @@ main {
     border-radius: 4px;
     padding: 2px;
     font-size: 0.8rem;
-    width: 65px;
+    width: 120px;
+    /* Increased from 65px to fill more space in 170px column */
 }
 
 .track-del-btn {
