@@ -240,6 +240,40 @@ main {
     padding: 10px;
     border-radius: 8px;
     border: 1px solid var(--glass-border);
+    position: relative;
+    /* For absolute positioning of delete button */
+}
+
+.bar-del-btn {
+    position: absolute;
+    top: -10px;
+    right: -10px;
+    width: 24px;
+    height: 24px;
+    background: rgba(50, 50, 50, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    color: var(--text-muted);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    font-size: 1rem;
+    line-height: 1;
+    z-index: 20;
+    transition: all 0.2s;
+    opacity: 0;
+}
+
+.system-container:hover .bar-del-btn {
+    opacity: 1;
+}
+
+.bar-del-btn:hover {
+    background: #ff4444;
+    color: white;
+    transform: scale(1.1);
+    border-color: #ff4444;
 }
 
 /* Grid Items */
@@ -331,11 +365,11 @@ main {
 
 .add-beat-col-btn {
     width: 100%;
-    height: 100%;
-    /* Min height to match header */
-    min-height: 25px;
+    height: 40px;
+    /* Fixed height instead of 100% */
     background: rgba(255, 255, 255, 0.05);
-    border: 1px dashed rgba(255, 255, 255, 0.2);
+    border: none;
+    /* Removed dashed border */
     border-radius: 4px;
     color: var(--text-muted);
     font-size: 1.2rem;
@@ -345,12 +379,18 @@ main {
     display: flex;
     justify-content: center;
     align-items: center;
+    align-self: center;
+    /* Center vertically in the grid cell */
+    transform: translateY(18px);
+    /* Adjusted to be between 10px (high) and 25px (low) */
+    padding: 0;
+    line-height: 1;
 }
 
 .add-beat-col-btn:hover {
     background: rgba(255, 255, 255, 0.1);
     color: #fff;
-    border-color: rgba(255, 255, 255, 0.5);
+    /* Removed border color change */
 }
 
 /* Beat Controls */

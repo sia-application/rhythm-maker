@@ -146,37 +146,44 @@ class Sequencer {
 
     addBar() {
         const barId = this.bars.length;
-        const newBar = {
+        const bar = {
             id: barId,
             beats: [],
             tracks: []
         };
-
-        // Init beats
+        // Default: 4 beats, subdivision 4
         for (let i = 0; i < this.timeSignature; i++) {
-            newBar.beats.push({ subdivision: 4 });
+            bar.beats.push({ subdivision: 4 });
         }
+        // Add default tracks
+        // Default to just Metronome (1 track) as requested.
+        const defaultTracks = ['metronome'];
 
-        // Add default track if it's the first bar, or maybe always adding empty?
-        // User request "Add Track belongs to one bar".
-        // Let's add one default kick track for convenience on new bars so it's not empty?
-        // Or keep it empty. Let's add default Kick so user sees something.
+        defaultTracks.forEach(type => {
+            const track = {
+                type: type,
+                pattern: []
+            };
+            // Init pattern for each beat
+            bar.beats.forEach(() => {
+                track.pattern.push(new Array(4).fill(false));
+            });
+            bar.tracks.push(track);
+        });
 
-        // Actually, for refactor, let's keep it consistent.
-        // We create a default track for the new bar.
-        const track = {
-            id: this.nextTrackId++,
-            type: 'kick',
-            pattern: []
-        };
-        // Init pattern
-        for (let b = 0; b < newBar.beats.length; b++) {
-            track.pattern.push(new Array(newBar.beats[b].subdivision).fill(false));
+        this.bars.push(bar);
+        return bar;
+    }
+
+    removeBar(barIndex) {
+        if (this.bars.length <= 1) return; // Keep at least one bar
+        if (barIndex < 0 || barIndex >= this.bars.length) return;
+        this.bars.splice(barIndex, 1);
+
+        // Adjust current Bar index if needed
+        if (this.currentBarIndex >= this.bars.length) {
+            this.currentBarIndex = this.bars.length - 1;
         }
-        newBar.tracks.push(track);
-
-        this.bars.push(newBar);
-        return newBar;
     }
 
     addTrack(barIndex, type = 'kick') {
@@ -662,6 +669,18 @@ class UI {
             // Added 40px column at the end for the + button
             systemContainer.style.gridTemplateColumns = `170px repeat(${bar.beats.length}, minmax(100px, 1fr)) 40px`;
 
+            // Delete Bar Button
+            const barDelBtn = document.createElement('button');
+            barDelBtn.innerText = '×';
+            barDelBtn.className = 'bar-del-btn';
+            barDelBtn.title = 'Delete Bar';
+            barDelBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.seq.removeBar(barIndex);
+                this.renderGrid();
+            });
+            systemContainer.appendChild(barDelBtn);
+
             // 1. Header (Subdivision)
             const emptyHeader = document.createElement('div');
             emptyHeader.className = 'grid-row-label';
@@ -734,6 +753,8 @@ class UI {
             addBeatRightBtn.innerText = '+';
             addBeatRightBtn.className = 'add-beat-col-btn';
             addBeatRightBtn.title = 'Add Beat';
+            addBeatRightBtn.style.gridRow = `1 / span ${1 + bar.tracks.length}`;
+            addBeatRightBtn.style.gridColumn = `${bar.beats.length + 2}`;
             addBeatRightBtn.addEventListener('click', () => {
                 this.seq.addBeat(barIndex);
                 this.renderGrid();
@@ -812,10 +833,6 @@ class UI {
                     }
                     systemContainer.appendChild(beatCell);
                 });
-
-                // Spacer for the Add Beat column in track rows
-                const spacer = document.createElement('div');
-                systemContainer.appendChild(spacer);
             });
 
             // 3. Add Track Button INSIDE the Bar (Last Row of Grid or separate?)
