@@ -294,6 +294,33 @@ main {
     justify-content: center;
     align-items: center;
     margin-bottom: 5px;
+    position: relative;
+    /* For absolute positioning of delete button */
+}
+
+.beat-del-btn {
+    position: absolute;
+    top: -12px;
+    right: -2px;
+    background: transparent;
+    color: var(--text-muted);
+    border: none;
+    font-size: 0.8rem;
+    cursor: pointer;
+    line-height: 1;
+    padding: 2px;
+    opacity: 0;
+    /* Hidden by default */
+    transition: opacity 0.2s;
+}
+
+.beat-header:hover .beat-del-btn {
+    opacity: 1;
+    /* Show on hover */
+}
+
+.beat-del-btn:hover {
+    color: #FF4444;
 }
 
 /* Beat Controls */
@@ -363,19 +390,22 @@ main {
 }
 
 .action-btn {
-    background: linear-gradient(135deg, #00d2ff 0%, #3a7bd5 100%);
+    background: rgba(255, 255, 255, 0.1);
     border: none;
-    padding: 10px 20px;
-    color: white;
-    border-radius: 5px;
-    font-weight: bold;
+    padding: 8px 16px;
+    color: var(--text-muted);
+    border-radius: 4px;
+    font-weight: 600;
     cursor: pointer;
-    box-shadow: 0 0 10px rgba(0, 210, 255, 0.5);
     margin-top: 10px;
+    transition: all 0.2s ease;
+    /* Remove shadow and gradient */
 }
 
 .action-btn:hover {
-    transform: scale(1.05);
+    background: rgba(255, 255, 255, 0.2);
+    color: #fff;
+    transform: translateY(-1px);
 }
 
 /* Metronome Color */

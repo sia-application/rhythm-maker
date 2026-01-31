@@ -244,6 +244,18 @@ class Sequencer {
         });
     }
 
+    removeBeatAt(barIndex, beatIndex) {
+        if (!this.bars[barIndex]) return;
+        const bar = this.bars[barIndex];
+        if (bar.beats.length <= 1) return; // Keep at least 1 beat
+        if (beatIndex < 0 || beatIndex >= bar.beats.length) return;
+
+        bar.beats.splice(beatIndex, 1);
+        bar.tracks.forEach(track => {
+            track.pattern.splice(beatIndex, 1);
+        });
+    }
+
     updateBeatSubdivision(barIndex, beatIndex, newSubdiv) {
         if (!this.bars[barIndex]) return;
         const bar = this.bars[barIndex];
@@ -729,6 +741,18 @@ class UI {
                 ctrlContainer.appendChild(plusBtn);
 
                 beatHeader.appendChild(ctrlContainer);
+
+                // Delete Beat Button (x)
+                const delBeatBtn = document.createElement('button');
+                delBeatBtn.innerText = '×';
+                delBeatBtn.className = 'beat-del-btn';
+                delBeatBtn.title = 'Delete Beat';
+                delBeatBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.seq.removeBeatAt(barIndex, bIndex);
+                    this.renderGrid();
+                });
+                beatHeader.appendChild(delBeatBtn);
                 systemContainer.appendChild(beatHeader);
             });
 
@@ -846,7 +870,7 @@ class UI {
         const addBarBtn = document.createElement('button');
         addBarBtn.innerText = '+ Add Bar (続き)';
         addBarBtn.className = 'action-btn';
-        addBarBtn.style.background = 'linear-gradient(135deg, #FF9966 0%, #FF5E62 100%)';
+        // Removed inline background to use class style
         addBarBtn.addEventListener('click', () => {
             this.seq.addBar();
             this.renderGrid();
