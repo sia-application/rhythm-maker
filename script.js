@@ -524,7 +524,7 @@ class UI {
         // Controls
         this.playBtn.addEventListener('click', () => this.seq.play());
         document.getElementById('stop-btn').addEventListener('click', () => this.seq.stop());
-        document.getElementById('clear-btn').addEventListener('click', () => {
+        document.getElementById('reset-btn').addEventListener('click', () => {
             this.seq.bars.forEach(bar => {
                 bar.tracks.forEach(track => {
                     track.pattern.forEach(beat => beat.fill(false));
@@ -939,7 +939,7 @@ class UI {
         actionContainer.style.justifyContent = 'center';
 
         const addBarBtn = document.createElement('button');
-        addBarBtn.innerText = '+ Add Bar (続き)';
+        addBarBtn.innerText = '+ Add Bar';
         addBarBtn.className = 'action-btn';
         // Removed inline background to use class style
         addBarBtn.addEventListener('click', () => {
