@@ -300,27 +300,33 @@ main {
 
 .beat-del-btn {
     position: absolute;
-    top: -12px;
-    right: -2px;
-    background: transparent;
+    top: -10px;
+    right: -5px;
+    background: rgba(255, 255, 255, 0.1);
     color: var(--text-muted);
     border: none;
-    font-size: 0.8rem;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    /* Circle looks better for corner delete, or use 4px for consistency */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 1rem;
     cursor: pointer;
-    line-height: 1;
-    padding: 2px;
     opacity: 0;
-    /* Hidden by default */
-    transition: opacity 0.2s;
+    transition: all 0.2s ease;
+    z-index: 10;
 }
 
 .beat-header:hover .beat-del-btn {
     opacity: 1;
-    /* Show on hover */
 }
 
 .beat-del-btn:hover {
-    color: #FF4444;
+    background: rgba(255, 0, 0, 0.3);
+    color: #fff;
+    transform: scale(1.1);
 }
 
 /* Beat Controls */
