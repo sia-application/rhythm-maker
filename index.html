@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rhythm Maker</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=Noto+Sans+JP:wght@300;400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="app">
+        <header class="app-header">
+            <h1>RHYTHM MAKER</h1>
+            <div class="header-controls">
+                <button id="toggle-game-mode" class="btn-secondary">Game Mode</button>
+            </div>
+        </header>
+
+        <main>
+            <div class="controls-bar glass-panel">
+                <div class="control-group">
+                    <button id="play-btn" class="btn-primary icon-btn">
+                        <span class="icon-play">▶</span>
+                    </button>
+                    <button id="stop-btn" class="btn-danger icon-btn">
+                        <span class="icon-stop">■</span>
+                    </button>
+                </div>
+
+                <div class="control-group">
+                    <label for="bpm-input">BPM: <span id="bpm-display">120</span></label>
+                    <input type="range" id="bpm-input" min="40" max="240" value="120">
+                </div>
+
+                <div class="control-group">
+                    <label>Time Sig</label>
+                    <select id="time-sig-select" class="select-input">
+                        <option value="4">4/4</option>
+                        <option value="3">3/4</option>
+                    </select>
+                </div>
+
+                <div class="control-group">
+                    <label>Subdivision</label>
+                    <select id="subdiv-select" class="select-input">
+                        <option value="4">16th (4連)</option>
+                        <option value="2">8th (8分)</option>
+                        <option value="3">Triplets (3連)</option>
+                        <option value="6">Sextuplets (6連)</option>
+                    </select>
+                </div>
+                
+                <div class="control-group">
+                    <button id="clear-btn" class="btn-text">Clear</button>
+                </div>
+            </div>
+
+            <div id="sequencer-view" class="active-view">
+                <div class="sequencer-container glass-panel">
+                    <!-- Grid will be generated here -->
+                    <div id="sequencer-grid" class="sequencer-grid"></div>
+                </div>
+            </div>
+
+            <div id="game-view" class="hidden-view glass-panel">
+                <div class="game-area">
+                    <div class="score-board">
+                        <span>SCORE: <span id="score-val">0</span></span>
+                        <span>COMBO: <span id="combo-val">0</span></span>
+                    </div>
+                    <div class="track-container" id="track-container">
+                        <!-- Falling notes -->
+                        <div class="track-line"></div>
+                        <div class="judgment-line"></div>
+                    </div>
+                    <div class="game-message" id="game-message">Press PLAY to Start</div>
+                </div>
+                <button id="close-game-btn" class="btn-text">Close Game</button>
+            </div>
+        </main>
+        
+        <div id="start-overlay" class="overlay">
+            <div class="overlay-content glass-panel">
+                <h2>RHYTHM MAKER</h2>
+                <p>Click to Start</p>
+                <button id="init-audio-btn" class="btn-primary large-btn">ENTER</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
