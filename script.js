@@ -259,12 +259,6 @@ class UI {
 
         this.timeSigSelect.addEventListener('change', updateParams);
         this.subdivSelect.addEventListener('change', updateParams);
-
-        // Overlay
-        document.getElementById('init-audio-btn').addEventListener('click', () => {
-            this.seq.audio.init();
-            document.getElementById('start-overlay').classList.add('hidden');
-        });
     }
 
     renderGrid() {
@@ -295,6 +289,10 @@ class UI {
                 }
 
                 btn.addEventListener('click', () => {
+                    // Ensure audio is initialized on first user interaction
+                    if (!this.seq.audio.isInitialized) {
+                        this.seq.audio.init();
+                    }
                     this.seq.toggleStep(inst, i);
                     btn.classList.toggle('active');
                     if (!this.seq.isPlaying) {

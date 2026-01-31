@@ -1,14 +1,18 @@
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Rhythm Maker</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=Noto+Sans+JP:wght@300;400;700&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=Noto+Sans+JP:wght@300;400;700&display=swap"
+        rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
     <div id="app">
         <header class="app-header">
@@ -31,7 +35,7 @@
 
                 <div class="control-group">
                     <label for="bpm-input">BPM: <span id="bpm-display">120</span></label>
-                    <input type="range" id="bpm-input" min="40" max="240" value="120">
+                    <input type="range" id="bpm-input" min="20" max="999" value="120">
                 </div>
 
                 <div class="control-group">
@@ -51,7 +55,7 @@
                         <option value="6">Sextuplets (6連)</option>
                     </select>
                 </div>
-                
+
                 <div class="control-group">
                     <button id="clear-btn" class="btn-text">Clear</button>
                 </div>
@@ -80,16 +84,9 @@
                 <button id="close-game-btn" class="btn-text">Close Game</button>
             </div>
         </main>
-        
-        <div id="start-overlay" class="overlay">
-            <div class="overlay-content glass-panel">
-                <h2>RHYTHM MAKER</h2>
-                <p>Click to Start</p>
-                <button id="init-audio-btn" class="btn-primary large-btn">ENTER</button>
-            </div>
-        </div>
     </div>
 
     <script src="script.js"></script>
 </body>
+
 </html>
