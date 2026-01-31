@@ -242,6 +242,33 @@ class Sequencer {
         });
     }
 
+    updateBeatSubdivisionAllBars(beatIndex, delta) {
+        console.log(`[Batch Update] Beat: ${beatIndex}, Delta: ${delta}`);
+        this.bars.forEach((bar, barIndex) => {
+            // Check if beatIndex exists in this bar
+            if (beatIndex < bar.beats.length) {
+                const currentSubdiv = bar.beats[beatIndex].subdivision;
+                const newSubdiv = Math.max(1, currentSubdiv + delta); // Prevent < 1
+                console.log(`  > Bar ${barIndex}: Updating Beat ${beatIndex} from ${currentSubdiv} to ${newSubdiv}`);
+                this.updateBeatSubdivision(barIndex, beatIndex, newSubdiv);
+            } else {
+                console.log(`  > Bar ${barIndex}: Beat ${beatIndex} out of range (Length: ${bar.beats.length})`);
+            }
+        });
+    }
+
+    updateBeatSubdivisionBar(barIndex, delta) {
+        console.log(`[Bar Update] Bar: ${barIndex}, Delta: ${delta}`);
+        const bar = this.bars[barIndex];
+        if (!bar) return;
+
+        bar.beats.forEach((beat, bIndex) => {
+            const currentSubdiv = beat.subdivision;
+            const newSubdiv = Math.max(1, currentSubdiv + delta);
+            this.updateBeatSubdivision(barIndex, bIndex, newSubdiv);
+        });
+    }
+
     removeStep(barIndex, beatIndex, stepIndex) {
         if (!this.bars[barIndex]) return;
         const bar = this.bars[barIndex];
@@ -254,6 +281,16 @@ class Sequencer {
         // Update patterns
         bar.tracks.forEach(track => {
             track.pattern[beatIndex].splice(stepIndex, 1);
+        });
+    }
+
+    removeStepAllBars(beatIndex, stepIndex) {
+        console.log(`[Batch Remove] Beat: ${beatIndex}, Step: ${stepIndex}`);
+        this.bars.forEach((bar, barIndex) => {
+            if (beatIndex < bar.beats.length) {
+                console.log(`  > Bar ${barIndex}: Removing step`);
+                this.removeStep(barIndex, beatIndex, stepIndex);
+            }
         });
     }
 
@@ -400,7 +437,10 @@ class UI {
         this.playBtn = document.getElementById('play-btn');
         this.ctxMenu = document.getElementById('context-menu');
         this.ctxAddBtn = document.getElementById('ctx-add-step');
+        this.ctxAddBarBtn = document.getElementById('ctx-add-step-bar');
+        this.ctxAddAllBtn = document.getElementById('ctx-add-step-all');
         this.ctxDelBtn = document.getElementById('ctx-del-step');
+        this.ctxDelAllBtn = document.getElementById('ctx-del-step-all');
         this.ctxTarget = { bar: -1, beat: -1, step: -1 };
 
         this.setupListeners();
@@ -500,6 +540,7 @@ class UI {
 
         this.ctxAddBtn.addEventListener('click', () => {
             const t = this.ctxTarget;
+            console.log("Ctx: Add Step", t);
             if (t.bar !== -1 && t.beat !== -1) {
                 const currentSubdiv = this.seq.bars[t.bar].beats[t.beat].subdivision;
                 this.seq.updateBeatSubdivision(t.bar, t.beat, currentSubdiv + 1);
@@ -508,11 +549,46 @@ class UI {
             this.ctxMenu.classList.add('hidden');
         });
 
+        this.ctxAddBarBtn.addEventListener('click', () => {
+            const t = this.ctxTarget;
+            console.log("Ctx: Add Bar", t);
+            if (t.bar !== -1) {
+                this.seq.updateBeatSubdivisionBar(t.bar, 1);
+                this.renderGrid();
+            }
+            this.ctxMenu.classList.add('hidden');
+        });
+
+        this.ctxAddAllBtn.addEventListener('click', () => {
+            const t = this.ctxTarget;
+            console.log("Ctx: Add All", t);
+            if (t.beat !== -1) {
+                this.seq.updateBeatSubdivisionAllBars(t.beat, 1);
+                this.renderGrid();
+            } else {
+                console.warn("Ctx: Add All - Beat is -1");
+            }
+            this.ctxMenu.classList.add('hidden');
+        });
+
         this.ctxDelBtn.addEventListener('click', () => {
             const t = this.ctxTarget;
+            console.log("Ctx: Del Step", t);
             if (t.bar !== -1 && t.beat !== -1 && t.step !== -1) {
                 this.seq.removeStep(t.bar, t.beat, t.step);
                 this.renderGrid();
+            }
+            this.ctxMenu.classList.add('hidden');
+        });
+
+        this.ctxDelAllBtn.addEventListener('click', () => {
+            const t = this.ctxTarget;
+            console.log("Ctx: Del All", t);
+            if (t.beat !== -1 && t.step !== -1) {
+                this.seq.removeStepAllBars(t.beat, t.step);
+                this.renderGrid();
+            } else {
+                console.warn("Ctx: Del All - Beat or Step is -1");
             }
             this.ctxMenu.classList.add('hidden');
         });
