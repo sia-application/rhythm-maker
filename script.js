@@ -659,9 +659,8 @@ class UI {
             // Container for this Bar
             const systemContainer = document.createElement('div');
             systemContainer.className = 'system-container';
-            // Grid columns: Label + beats
-            // Use minmax to ensure it doesn't squish on small screens
-            systemContainer.style.gridTemplateColumns = `170px repeat(${bar.beats.length}, minmax(100px, 1fr))`;
+            // Added 40px column at the end for the + button
+            systemContainer.style.gridTemplateColumns = `170px repeat(${bar.beats.length}, minmax(100px, 1fr)) 40px`;
 
             // 1. Header (Subdivision)
             const emptyHeader = document.createElement('div');
@@ -676,32 +675,6 @@ class UI {
             const labelSpan = document.createElement('span');
             labelSpan.innerText = `Bar ${barIndex + 1}`;
             emptyHeader.appendChild(labelSpan);
-
-            // Per-Bar Beat Control
-            const beatCtrl = document.createElement('div');
-            beatCtrl.className = 'beat-subdiv-ctrl'; // Reuse style
-
-            const minusBeatBtn = document.createElement('button');
-            minusBeatBtn.innerText = '-';
-            minusBeatBtn.className = 'subdiv-btn';
-            minusBeatBtn.title = 'Remove Beat';
-            minusBeatBtn.addEventListener('click', () => {
-                this.seq.removeBeat(barIndex);
-                this.renderGrid();
-            });
-
-            const plusBeatBtn = document.createElement('button');
-            plusBeatBtn.innerText = '+';
-            plusBeatBtn.className = 'subdiv-btn';
-            plusBeatBtn.title = 'Add Beat';
-            plusBeatBtn.addEventListener('click', () => {
-                this.seq.addBeat(barIndex);
-                this.renderGrid();
-            });
-
-            beatCtrl.appendChild(minusBeatBtn);
-            beatCtrl.appendChild(plusBeatBtn);
-            emptyHeader.appendChild(beatCtrl);
 
             systemContainer.appendChild(emptyHeader);
 
@@ -755,6 +728,17 @@ class UI {
                 beatHeader.appendChild(delBeatBtn);
                 systemContainer.appendChild(beatHeader);
             });
+
+            // Add Beat Button (Right Column, Header Row)
+            const addBeatRightBtn = document.createElement('button');
+            addBeatRightBtn.innerText = '+';
+            addBeatRightBtn.className = 'add-beat-col-btn';
+            addBeatRightBtn.title = 'Add Beat';
+            addBeatRightBtn.addEventListener('click', () => {
+                this.seq.addBeat(barIndex);
+                this.renderGrid();
+            });
+            systemContainer.appendChild(addBeatRightBtn);
 
             // 2. Tracks for this BAR
             const instrumentOptions = Object.keys(this.seq.audio.instruments);
@@ -828,6 +812,10 @@ class UI {
                     }
                     systemContainer.appendChild(beatCell);
                 });
+
+                // Spacer for the Add Beat column in track rows
+                const spacer = document.createElement('div');
+                systemContainer.appendChild(spacer);
             });
 
             // 3. Add Track Button INSIDE the Bar (Last Row of Grid or separate?)

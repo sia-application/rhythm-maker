@@ -329,6 +329,30 @@ main {
     transform: scale(1.1);
 }
 
+.add-beat-col-btn {
+    width: 100%;
+    height: 100%;
+    /* Min height to match header */
+    min-height: 25px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px dashed rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    color: var(--text-muted);
+    font-size: 1.2rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.add-beat-col-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    border-color: rgba(255, 255, 255, 0.5);
+}
+
 /* Beat Controls */
 .beat-subdiv-ctrl {
     display: flex;
