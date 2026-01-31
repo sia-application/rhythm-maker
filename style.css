@@ -213,10 +213,14 @@ main {
 .sequencer-container {
     width: 100%;
     height: 100%;
+    display: block;
+    /* changed from flex to block to ensure scroll works reliably with grid? or keep flex? */
+    /* flex direction column was there. */
+    /* Let's keep flex but ensure overflow works */
     display: flex;
     flex-direction: column;
-    overflow-x: auto;
-    /* Allow horizontal scroll for long patterns */
+    overflow: auto;
+    /* Allow both horizontal and vertical scroll */
 }
 
 .sequencer-grid {
