@@ -289,7 +289,61 @@ main {
     border-radius: 4px;
     font-size: 0.8rem;
     padding: 2px;
-}/* Context Menu */
+}
+
+/* Track Controls */
+.track-inst-select {
+    background: rgba(0, 0, 0, 0.5);
+    color: #fff;
+    border: 1px solid #444;
+    border-radius: 4px;
+    padding: 2px;
+    font-size: 0.8rem;
+    width: 65px;
+}
+
+.track-del-btn {
+    background: #FF4444;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    width: 20px;
+    height: 20px;
+    line-height: 20px;
+    text-align: center;
+    cursor: pointer;
+    padding: 0;
+    font-size: 0.8rem;
+}
+
+.track-del-btn:hover {
+    background: #ff6666;
+}
+
+.action-btn {
+    background: linear-gradient(135deg, #00d2ff 0%, #3a7bd5 100%);
+    border: none;
+    padding: 10px 20px;
+    color: white;
+    border-radius: 5px;
+    font-weight: bold;
+    cursor: pointer;
+    box-shadow: 0 0 10px rgba(0, 210, 255, 0.5);
+    margin-top: 10px;
+}
+
+.action-btn:hover {
+    transform: scale(1.05);
+}
+
+/* Metronome Color */
+.step-btn.metronome.active {
+    background-color: #ffe100;
+    box-shadow: 0 0 15px #ffe100;
+    border-color: #ffe100;
+}
+
+/* Context Menu */
 #context-menu {
     position: fixed;
     background: #1a1d26;

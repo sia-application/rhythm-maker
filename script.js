@@ -13,7 +13,8 @@ class AudioEngine {
             'kick': { freq: 150, decay: 0.5, type: 'sine' },
             'snare': { freq: 200, decay: 0.2, type: 'noise' },
             'hihat': { freq: 800, decay: 0.1, type: 'noise' },
-            'tom': { freq: 100, decay: 0.4, type: 'triangle' }
+            'tom': { freq: 100, decay: 0.4, type: 'triangle' },
+            'metronome': { freq: 1000, decay: 0.05, type: 'square' }
         };
     }
 
@@ -104,6 +105,9 @@ class AudioEngine {
                 // Highpass noise
                 this.playNoise(t, 0.05);
                 break;
+            case 'metronome':
+                this.playTone(t, 'square', 1000, 0.05);
+                break;
         }
     }
 }
@@ -127,13 +131,16 @@ class Sequencer {
         // Data: Beats array stores subdivision for each beat
         this.beats = [];
 
-        // Pattern Data: Map of Instrument -> 2D Array [beatIndex][stepIndex]
-        this.instruments = ['kick', 'snare', 'hihat', 'tom'];
-        this.pattern = {};
+        // Tracks: List of { id, type, pattern }
+        // pattern is 2D array [beatIndex][stepIndex]
+        this.tracks = [];
+        this.nextTrackId = 0;
 
         // Initial setup
         this.initBeats();
-        this.resetPattern();
+
+        // Default Track
+        this.addTrack('kick');
     }
 
     initBeats() {
@@ -143,36 +150,58 @@ class Sequencer {
         }
     }
 
+    addTrack(type = 'kick') {
+        const track = {
+            id: this.nextTrackId++,
+            type: type,
+            pattern: []
+        };
+
+        // Init pattern for current beats
+        for (let b = 0; b < this.timeSignature; b++) {
+            const subdiv = this.beats[b].subdivision;
+            track.pattern.push(new Array(subdiv).fill(false));
+        }
+
+        this.tracks.push(track);
+        return track;
+    }
+
+    removeTrack(index) {
+        if (index >= 0 && index < this.tracks.length) {
+            this.tracks.splice(index, 1);
+        }
+    }
+
+    changeTrackType(index, newType) {
+        if (index >= 0 && index < this.tracks.length) {
+            this.tracks[index].type = newType;
+        }
+    }
+
     resetPattern() {
-        // pattern[inst] = [ [bool, bool, ...], [bool...], ... ]
-        this.instruments.forEach(inst => {
-            if (!this.pattern[inst]) this.pattern[inst] = [];
-
-            // Resize/Reset based on current beats
-            // For now, simpler to just ensure structure matches this.beats
-            // We want to preserve data if possible?
-            // Let's create a new structure and copy over what fits.
-
+        // Iterate tracks and resize patterns
+        this.tracks.forEach(track => {
             const newPattern = [];
             for (let b = 0; b < this.timeSignature; b++) {
                 const subdiv = this.beats[b].subdivision;
                 const beatSteps = new Array(subdiv).fill(false);
 
                 // Copy if exists
-                if (this.pattern[inst][b]) {
-                    for (let s = 0; s < Math.min(subdiv, this.pattern[inst][b].length); s++) {
-                        beatSteps[s] = this.pattern[inst][b][s];
+                if (track.pattern[b]) {
+                    for (let s = 0; s < Math.min(subdiv, track.pattern[b].length); s++) {
+                        beatSteps[s] = track.pattern[b][s];
                     }
                 }
                 newPattern.push(beatSteps);
             }
-            this.pattern[inst] = newPattern;
+            track.pattern = newPattern;
         });
     }
 
-    toggleStep(inst, beatIndex, stepIndex) {
-        if (this.pattern[inst] && this.pattern[inst][beatIndex]) {
-            this.pattern[inst][beatIndex][stepIndex] = !this.pattern[inst][beatIndex][stepIndex];
+    toggleStep(trackIndex, beatIndex, stepIndex) {
+        if (this.tracks[trackIndex]) {
+            this.tracks[trackIndex].pattern[beatIndex][stepIndex] = !this.tracks[trackIndex].pattern[beatIndex][stepIndex];
         }
     }
 
@@ -180,16 +209,16 @@ class Sequencer {
         if (beatIndex < 0 || beatIndex >= this.beats.length) return;
         this.beats[beatIndex].subdivision = newSubdiv;
 
-        // Update pattern for this beat
-        this.instruments.forEach(inst => {
-            const oldBeatDetails = this.pattern[inst][beatIndex];
+        // Update patterns for all tracks
+        this.tracks.forEach(track => {
+            const oldBeatDetails = track.pattern[beatIndex];
             const newBeatDetails = new Array(newSubdiv).fill(false);
 
             // Copy exist data
             for (let i = 0; i < Math.min(oldBeatDetails.length, newSubdiv); i++) {
                 newBeatDetails[i] = oldBeatDetails[i];
             }
-            this.pattern[inst][beatIndex] = newBeatDetails;
+            track.pattern[beatIndex] = newBeatDetails;
         });
     }
 
@@ -200,10 +229,9 @@ class Sequencer {
 
         this.beats[beatIndex].subdivision = currentSubdiv - 1;
 
-        // Update pattern
-        this.instruments.forEach(inst => {
-            // Remove the specific step
-            this.pattern[inst][beatIndex].splice(stepIndex, 1);
+        // Update patterns
+        this.tracks.forEach(track => {
+            track.pattern[beatIndex].splice(stepIndex, 1);
         });
     }
 
@@ -225,9 +253,9 @@ class Sequencer {
     }
 
     scheduleNote(beatIndex, stepInBeat, time) {
-        this.instruments.forEach(inst => {
-            if (this.pattern[inst][beatIndex][stepInBeat]) {
-                this.audio.playInstrument(inst, time);
+        this.tracks.forEach((track, tIndex) => {
+            if (track.pattern[beatIndex][stepInBeat]) {
+                this.audio.playInstrument(track.type, time);
             }
         });
 
@@ -323,7 +351,9 @@ class UI {
         this.playBtn.addEventListener('click', () => this.seq.play());
         document.getElementById('stop-btn').addEventListener('click', () => this.seq.stop());
         document.getElementById('clear-btn').addEventListener('click', () => {
-            this.seq.instruments.forEach(inst => this.seq.pattern[inst].fill(false));
+            this.seq.tracks.forEach(track => {
+                track.pattern.forEach(beat => beat.fill(false));
+            });
             this.renderGrid();
         });
 
@@ -419,19 +449,15 @@ class UI {
         this.grid.innerHTML = '';
 
         // Grid Layout:
-        // Column 1: Labels
+        // Column 1: Labels (170px for controls)
         // Column 2..N+1: Beats
 
-        // We will use CSS Grid for the main structure
-        // grid-template-columns: 100px repeat(timeSig, 1fr)
-        this.grid.style.gridTemplateColumns = `100px repeat(${this.seq.timeSignature}, 1fr)`;
+        this.grid.style.gridTemplateColumns = `170px repeat(${this.seq.timeSignature}, 1fr)`;
 
         // 1. Header Row (Subdivision Controls)
-        // Leading empty cell for labels column
         const emptyHeader = document.createElement('div');
         this.grid.appendChild(emptyHeader);
 
-        // Beat headers
         this.seq.beats.forEach((beat, bIndex) => {
             const beatHeader = document.createElement('div');
             beatHeader.className = 'beat-header';
@@ -449,60 +475,105 @@ class UI {
             select.addEventListener('change', (e) => {
                 const newSubdiv = parseInt(e.target.value);
                 this.seq.updateBeatSubdivision(bIndex, newSubdiv);
-                this.renderGrid(); // Re-render to show new step count
+                this.renderGrid();
             });
 
             beatHeader.appendChild(select);
             this.grid.appendChild(beatHeader);
         });
 
-        // 2. Instrument Rows
-        this.seq.instruments.forEach(inst => {
-            // Label
-            const label = document.createElement('div');
-            label.className = 'grid-row-label';
-            label.innerText = inst.toUpperCase();
-            this.grid.appendChild(label);
+        // 2. Track Rows
+        const instrumentOptions = Object.keys(this.seq.audio.instruments);
+
+        this.seq.tracks.forEach((track, tIndex) => {
+            // Label Cell with Controls
+            const labelCell = document.createElement('div');
+            labelCell.className = 'grid-row-label';
+            labelCell.style.display = 'flex';
+            labelCell.style.justifyContent = 'space-between';
+            labelCell.style.alignItems = 'center';
+
+            // Instrument Select
+            const instSelect = document.createElement('select');
+            instSelect.className = 'track-inst-select';
+            instrumentOptions.forEach(optVal => {
+                const opt = document.createElement('option');
+                opt.value = optVal;
+                opt.innerText = optVal.toUpperCase();
+                if (track.type === optVal) opt.selected = true;
+                instSelect.appendChild(opt);
+            });
+            instSelect.addEventListener('change', (e) => {
+                this.seq.changeTrackType(tIndex, e.target.value);
+            });
+
+            // Delete Button
+            const delBtn = document.createElement('button');
+            delBtn.innerText = 'X';
+            delBtn.className = 'track-del-btn';
+            delBtn.style.marginLeft = '5px';
+            delBtn.addEventListener('click', () => {
+                this.seq.removeTrack(tIndex);
+                this.renderGrid();
+            });
+
+            labelCell.appendChild(instSelect);
+            labelCell.appendChild(delBtn);
+            this.grid.appendChild(labelCell);
 
             // Beat Cells
             this.seq.beats.forEach((beat, bIndex) => {
                 const beatCell = document.createElement('div');
                 beatCell.className = 'beat-cell';
-                // Internal grid for steps within the beat
                 beatCell.style.display = 'grid';
                 beatCell.style.gridTemplateColumns = `repeat(${beat.subdivision}, 1fr)`;
                 beatCell.style.gap = '2px';
 
                 for (let s = 0; s < beat.subdivision; s++) {
                     const btn = document.createElement('div');
-                    btn.className = `step-btn ${inst}`;
+                    // Add track type class for color
+                    btn.className = `step-btn ${track.type}`;
 
-                    // Active state from pattern
-                    if (this.seq.pattern[inst][bIndex] && this.seq.pattern[inst][bIndex][s]) {
+                    if (track.pattern[bIndex] && track.pattern[bIndex][s]) {
                         btn.classList.add('active');
                     }
 
-                    // Click handler (Main Click)
                     btn.addEventListener('click', (e) => {
-                        e.stopPropagation(); // prevent grid context menu if we had left click logic there logic, but standard click is fine
+                        e.stopPropagation();
                         if (!this.seq.audio.isInitialized) this.seq.audio.init();
-                        this.seq.toggleStep(inst, bIndex, s);
+                        this.seq.toggleStep(tIndex, bIndex, s);
                         btn.classList.toggle('active');
                         if (!this.seq.isPlaying) {
-                            this.seq.audio.playInstrument(inst);
+                            this.seq.audio.playInstrument(track.type);
                         }
                     });
 
                     // ID for highlighting
                     btn.dataset.beat = bIndex;
                     btn.dataset.step = s;
-                    btn.dataset.inst = inst;
 
                     beatCell.appendChild(btn);
                 }
                 this.grid.appendChild(beatCell);
             });
         });
+
+        // Add "Add Track" Button in a new row at the bottom
+        const addTrackContainer = document.createElement('div');
+        addTrackContainer.style.gridColumn = '1 / -1';
+        addTrackContainer.style.textAlign = 'center';
+        addTrackContainer.style.padding = '10px';
+
+        const addTrackBtn = document.createElement('button');
+        addTrackBtn.innerText = '+ Add Track';
+        addTrackBtn.className = 'action-btn';
+        addTrackBtn.addEventListener('click', () => {
+            this.seq.addTrack('kick');
+            this.renderGrid();
+        });
+
+        addTrackContainer.appendChild(addTrackBtn);
+        this.grid.appendChild(addTrackContainer);
     }
 
     highlightStep(beatIndex, stepIndex) {
@@ -525,15 +596,6 @@ class UI {
         icon.innerText = isPlaying ? "||" : "▶";
     }
 }
-
-// GameMode class removed
-
-// Modify Sequencer to notify GameMode
-// We'll Monkey Patch it or modify the class directly in the previous tool.
-// Since I'm appending GameMode, I'll add the hook here.
-
-// ScheduleNote monkey patch removed
-
 
 // Global instances
 const audio = new AudioEngine();
