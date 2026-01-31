@@ -854,7 +854,7 @@ class UI {
 
                 // Delete Button
                 const delBtn = document.createElement('button');
-                delBtn.innerText = 'X';
+                delBtn.innerText = '×';
                 delBtn.className = 'track-del-btn';
                 delBtn.style.marginLeft = '5px';
                 delBtn.addEventListener('click', () => {
