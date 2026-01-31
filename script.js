@@ -176,7 +176,7 @@ class Sequencer {
     }
 
     removeBar(barIndex) {
-        if (this.bars.length <= 1) return; // Keep at least one bar
+        // if (this.bars.length <= 1) return; // Allow deleting all bars
         if (barIndex < 0 || barIndex >= this.bars.length) return;
         this.bars.splice(barIndex, 1);
 
@@ -186,7 +186,7 @@ class Sequencer {
         }
     }
 
-    addTrack(barIndex, type = 'kick') {
+    addTrack(barIndex, type = 'metronome') {
         if (barIndex < 0 || barIndex >= this.bars.length) return;
 
         const bar = this.bars[barIndex];
@@ -921,7 +921,7 @@ class UI {
             addTrackBtn.style.padding = '5px 10px';
             addTrackBtn.style.marginTop = '0'; // Override generic
             addTrackBtn.addEventListener('click', () => {
-                this.seq.addTrack(barIndex, 'kick');
+                this.seq.addTrack(barIndex); // Defaults to metronome
                 this.renderGrid();
             });
 
@@ -935,7 +935,7 @@ class UI {
         // 4. Global Action (Add Bar)
         const actionContainer = document.createElement('div');
         actionContainer.style.textAlign = 'center';
-        actionContainer.style.padding = '20px';
+        actionContainer.style.padding = '2px 20px';
         actionContainer.style.display = 'flex';
         actionContainer.style.gap = '10px';
         actionContainer.style.justifyContent = 'center';
