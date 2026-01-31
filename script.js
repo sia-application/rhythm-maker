@@ -686,8 +686,8 @@ class UI {
             // Container for this Bar
             const systemContainer = document.createElement('div');
             systemContainer.className = 'system-container';
-            // Added 40px column at the end for the + button
-            systemContainer.style.gridTemplateColumns = `170px repeat(${bar.beats.length}, minmax(100px, 1fr)) 40px`;
+            // Added 30px column at the end for the + button
+            systemContainer.style.gridTemplateColumns = `170px repeat(${bar.beats.length}, minmax(100px, 1fr)) 30px`;
 
             // Delete Bar Button
             const barDelBtn = document.createElement('button');
