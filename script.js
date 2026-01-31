@@ -177,7 +177,9 @@ class Sequencer {
         // or just schedule the visual class toggle
         const drawTime = (time - this.audio.ctx.currentTime) * 1000;
         setTimeout(() => {
-            ui.highlightStep(stepNumber);
+            if (this.isPlaying) {
+                ui.highlightStep(stepNumber);
+            }
         }, Math.max(0, drawTime));
     }
 
@@ -606,7 +608,9 @@ Sequencer.prototype.scheduleNote = function (stepNumber, time) {
     // Update UI
     const drawTime = (time - this.audio.ctx.currentTime) * 1000;
     setTimeout(() => {
-        ui.highlightStep(stepNumber);
+        if (this.isPlaying) {
+            ui.highlightStep(stepNumber);
+        }
     }, Math.max(0, drawTime));
 };
 
