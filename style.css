@@ -224,12 +224,22 @@ main {
 }
 
 .sequencer-grid {
-    display: grid;
-    /* Columns defined in JS */
-    gap: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+    /* Space between systems */
     padding: 10px;
+}
+
+.system-container {
+    display: grid;
+    /* Columns defined in JS: 170px + beats */
+    gap: 8px;
     align-items: center;
-    /* Center vertically */
+    background: rgba(255, 255, 255, 0.02);
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid var(--glass-border);
 }
 
 /* Grid Items */

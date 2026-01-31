@@ -150,6 +150,25 @@ class Sequencer {
         }
     }
 
+    addBar() {
+        // Add beats equal to current timeSignature
+        const newBeatsCount = this.timeSignature;
+        // Add to beats array
+        for (let i = 0; i < newBeatsCount; i++) {
+            this.beats.push({ subdivision: 4 });
+        }
+
+        // Update all tracks with new empty patterns
+        // We need to calculate start index for new beats
+        const startIndex = this.beats.length - newBeatsCount;
+
+        this.tracks.forEach(track => {
+            for (let b = 0; b < newBeatsCount; b++) {
+                track.pattern.push(new Array(4).fill(false));
+            }
+        });
+    }
+
     addTrack(type = 'kick') {
         const track = {
             id: this.nextTrackId++,
@@ -158,7 +177,8 @@ class Sequencer {
         };
 
         // Init pattern for current beats
-        for (let b = 0; b < this.timeSignature; b++) {
+        // Use beats.length instead of timeSignature
+        for (let b = 0; b < this.beats.length; b++) {
             const subdiv = this.beats[b].subdivision;
             track.pattern.push(new Array(subdiv).fill(false));
         }
@@ -183,7 +203,8 @@ class Sequencer {
         // Iterate tracks and resize patterns
         this.tracks.forEach(track => {
             const newPattern = [];
-            for (let b = 0; b < this.timeSignature; b++) {
+            // Use beats.length to cover extended sequence
+            for (let b = 0; b < this.beats.length; b++) {
                 const subdiv = this.beats[b].subdivision;
                 const beatSteps = new Array(subdiv).fill(false);
 
@@ -447,122 +468,153 @@ class UI {
 
     renderGrid() {
         this.grid.innerHTML = '';
+        this.grid.className = 'sequencer-grid'; // Ensure class
 
-        // Grid Layout:
-        // Column 1: Labels (170px for controls)
-        // Column 2..N+1: Beats
+        const beatsPerSystem = this.seq.timeSignature; // Wrap every bar
+        const totalBeats = this.seq.beats.length;
+        const totalSystems = Math.ceil(totalBeats / beatsPerSystem);
 
-        this.grid.style.gridTemplateColumns = `170px repeat(${this.seq.timeSignature}, 1fr)`;
+        for (let sysIndex = 0; sysIndex < totalSystems; sysIndex++) {
+            const startBeat = sysIndex * beatsPerSystem;
+            const endBeat = Math.min(startBeat + beatsPerSystem, totalBeats);
+            const currentSystemBeats = this.seq.beats.slice(startBeat, endBeat);
 
-        // 1. Header Row (Subdivision Controls)
-        const emptyHeader = document.createElement('div');
-        this.grid.appendChild(emptyHeader);
+            // Container for this system
+            const systemContainer = document.createElement('div');
+            systemContainer.className = 'system-container';
+            // Grid columns: Label + beats in this system
+            // Use minmax to ensure it doesn't squish on small screens
+            systemContainer.style.gridTemplateColumns = `170px repeat(${currentSystemBeats.length}, minmax(100px, 1fr))`;
 
-        this.seq.beats.forEach((beat, bIndex) => {
-            const beatHeader = document.createElement('div');
-            beatHeader.className = 'beat-header';
+            // 1. Header (Subdivision)
+            const emptyHeader = document.createElement('div');
+            emptyHeader.innerText = `Bar ${sysIndex + 1}`;
+            emptyHeader.className = 'grid-row-label'; // Reuse label style
+            emptyHeader.style.color = '#8b9bb4';
+            emptyHeader.style.fontSize = '0.9rem';
+            emptyHeader.style.paddingLeft = '5px';
+            systemContainer.appendChild(emptyHeader);
 
-            const select = document.createElement('select');
-            select.className = 'beat-subdiv-select';
-            [4, 3, 2, 6, 8, 12].forEach(val => {
-                const opt = document.createElement('option');
-                opt.value = val;
-                opt.innerText = val;
-                if (beat.subdivision === val) opt.selected = true;
-                select.appendChild(opt);
+            currentSystemBeats.forEach((beat, i) => {
+                const globalBeatIndex = startBeat + i;
+                const beatHeader = document.createElement('div');
+                beatHeader.className = 'beat-header';
+
+                const select = document.createElement('select');
+                select.className = 'beat-subdiv-select';
+                [4, 3, 2, 6, 8, 12].forEach(val => {
+                    const opt = document.createElement('option');
+                    opt.value = val;
+                    opt.innerText = val;
+                    if (beat.subdivision === val) opt.selected = true;
+                    select.appendChild(opt);
+                });
+
+                select.addEventListener('change', (e) => {
+                    const newSubdiv = parseInt(e.target.value);
+                    this.seq.updateBeatSubdivision(globalBeatIndex, newSubdiv);
+                    this.renderGrid();
+                });
+
+                beatHeader.appendChild(select);
+                systemContainer.appendChild(beatHeader);
             });
 
-            select.addEventListener('change', (e) => {
-                const newSubdiv = parseInt(e.target.value);
-                this.seq.updateBeatSubdivision(bIndex, newSubdiv);
-                this.renderGrid();
-            });
+            // 2. Tracks
+            const instrumentOptions = Object.keys(this.seq.audio.instruments);
+            this.seq.tracks.forEach((track, tIndex) => {
+                // Label
+                const labelCell = document.createElement('div');
+                labelCell.className = 'grid-row-label';
+                labelCell.style.display = 'flex';
+                labelCell.style.justifyContent = 'space-between';
+                labelCell.style.alignItems = 'center';
 
-            beatHeader.appendChild(select);
-            this.grid.appendChild(beatHeader);
-        });
+                // Controls (only needed on first system? or all? User might want to change inst anywhere. Let's keep small controls)
+                // Instrument Select
+                const instSelect = document.createElement('select');
+                instSelect.className = 'track-inst-select';
 
-        // 2. Track Rows
-        const instrumentOptions = Object.keys(this.seq.audio.instruments);
+                // Only show full controls on first system to save space? Or repeating is fine?
+                // Plan said "Controls... repeated or handled gracefully".
+                // Let's repeat for now but maybe make them smaller or just minimal on subsequent systems if cluttered.
+                // Actually, if we have 10 systems, changing instrument on system 10 should change it for the whole track.
+                // Repeating controls is robust.
 
-        this.seq.tracks.forEach((track, tIndex) => {
-            // Label Cell with Controls
-            const labelCell = document.createElement('div');
-            labelCell.className = 'grid-row-label';
-            labelCell.style.display = 'flex';
-            labelCell.style.justifyContent = 'space-between';
-            labelCell.style.alignItems = 'center';
+                instrumentOptions.forEach(optVal => {
+                    const opt = document.createElement('option');
+                    opt.value = optVal;
+                    opt.innerText = optVal.toUpperCase();
+                    if (track.type === optVal) opt.selected = true;
+                    instSelect.appendChild(opt);
+                });
+                instSelect.addEventListener('change', (e) => {
+                    this.seq.changeTrackType(tIndex, e.target.value);
+                });
 
-            // Instrument Select
-            const instSelect = document.createElement('select');
-            instSelect.className = 'track-inst-select';
-            instrumentOptions.forEach(optVal => {
-                const opt = document.createElement('option');
-                opt.value = optVal;
-                opt.innerText = optVal.toUpperCase();
-                if (track.type === optVal) opt.selected = true;
-                instSelect.appendChild(opt);
-            });
-            instSelect.addEventListener('change', (e) => {
-                this.seq.changeTrackType(tIndex, e.target.value);
-            });
+                // Delete (only on first system to prevent accidental deletes mid-song?)
+                // Let's put delete button only on the first system.
+                labelCell.appendChild(instSelect);
 
-            // Delete Button
-            const delBtn = document.createElement('button');
-            delBtn.innerText = 'X';
-            delBtn.className = 'track-del-btn';
-            delBtn.style.marginLeft = '5px';
-            delBtn.addEventListener('click', () => {
-                this.seq.removeTrack(tIndex);
-                this.renderGrid();
-            });
-
-            labelCell.appendChild(instSelect);
-            labelCell.appendChild(delBtn);
-            this.grid.appendChild(labelCell);
-
-            // Beat Cells
-            this.seq.beats.forEach((beat, bIndex) => {
-                const beatCell = document.createElement('div');
-                beatCell.className = 'beat-cell';
-                beatCell.style.display = 'grid';
-                beatCell.style.gridTemplateColumns = `repeat(${beat.subdivision}, 1fr)`;
-                beatCell.style.gap = '2px';
-
-                for (let s = 0; s < beat.subdivision; s++) {
-                    const btn = document.createElement('div');
-                    // Add track type class for color
-                    btn.className = `step-btn ${track.type}`;
-
-                    if (track.pattern[bIndex] && track.pattern[bIndex][s]) {
-                        btn.classList.add('active');
-                    }
-
-                    btn.addEventListener('click', (e) => {
-                        e.stopPropagation();
-                        if (!this.seq.audio.isInitialized) this.seq.audio.init();
-                        this.seq.toggleStep(tIndex, bIndex, s);
-                        btn.classList.toggle('active');
-                        if (!this.seq.isPlaying) {
-                            this.seq.audio.playInstrument(track.type);
-                        }
+                if (sysIndex === 0) {
+                    const delBtn = document.createElement('button');
+                    delBtn.innerText = 'X';
+                    delBtn.className = 'track-del-btn';
+                    delBtn.style.marginLeft = '5px';
+                    delBtn.addEventListener('click', () => {
+                        this.seq.removeTrack(tIndex);
+                        this.renderGrid();
                     });
-
-                    // ID for highlighting
-                    btn.dataset.beat = bIndex;
-                    btn.dataset.step = s;
-
-                    beatCell.appendChild(btn);
+                    labelCell.appendChild(delBtn);
                 }
-                this.grid.appendChild(beatCell);
-            });
-        });
 
-        // Add "Add Track" Button in a new row at the bottom
-        const addTrackContainer = document.createElement('div');
-        addTrackContainer.style.gridColumn = '1 / -1';
-        addTrackContainer.style.textAlign = 'center';
-        addTrackContainer.style.padding = '10px';
+                systemContainer.appendChild(labelCell);
+
+                // Steps
+                currentSystemBeats.forEach((beat, i) => {
+                    const globalBeatIndex = startBeat + i;
+                    const beatCell = document.createElement('div');
+                    beatCell.className = 'beat-cell';
+                    beatCell.style.display = 'grid';
+                    beatCell.style.gridTemplateColumns = `repeat(${beat.subdivision}, 1fr)`;
+                    beatCell.style.gap = '2px';
+
+                    for (let s = 0; s < beat.subdivision; s++) {
+                        const btn = document.createElement('div');
+                        btn.className = `step-btn ${track.type}`;
+                        if (track.pattern[globalBeatIndex] && track.pattern[globalBeatIndex][s]) {
+                            btn.classList.add('active');
+                        }
+
+                        // ID for highlighting (Global indices)
+                        btn.dataset.beat = globalBeatIndex;
+                        btn.dataset.step = s;
+
+                        btn.addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            if (!this.seq.audio.isInitialized) this.seq.audio.init();
+                            this.seq.toggleStep(tIndex, globalBeatIndex, s);
+                            btn.classList.toggle('active');
+                            if (!this.seq.isPlaying) {
+                                this.seq.audio.playInstrument(track.type);
+                            }
+                        });
+                        beatCell.appendChild(btn);
+                    }
+                    systemContainer.appendChild(beatCell);
+                });
+            });
+
+            this.grid.appendChild(systemContainer);
+        }
+
+        // 3. Actions (Add Track / Add Bar)
+        const actionContainer = document.createElement('div');
+        actionContainer.style.textAlign = 'center';
+        actionContainer.style.padding = '20px';
+        actionContainer.style.display = 'flex';
+        actionContainer.style.gap = '10px';
+        actionContainer.style.justifyContent = 'center';
 
         const addTrackBtn = document.createElement('button');
         addTrackBtn.innerText = '+ Add Track';
@@ -572,8 +624,18 @@ class UI {
             this.renderGrid();
         });
 
-        addTrackContainer.appendChild(addTrackBtn);
-        this.grid.appendChild(addTrackContainer);
+        const addBarBtn = document.createElement('button');
+        addBarBtn.innerText = '+ Add Bar (続き)';
+        addBarBtn.className = 'action-btn';
+        addBarBtn.style.background = 'linear-gradient(135deg, #FF9966 0%, #FF5E62 100%)';
+        addBarBtn.addEventListener('click', () => {
+            this.seq.addBar();
+            this.renderGrid();
+        });
+
+        actionContainer.appendChild(addTrackBtn);
+        actionContainer.appendChild(addBarBtn);
+        this.grid.appendChild(actionContainer);
     }
 
     highlightStep(beatIndex, stepIndex) {
