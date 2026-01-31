@@ -294,6 +294,16 @@ class Sequencer {
         });
     }
 
+    removeStepBar(barIndex, stepIndex) {
+        console.log(`[Bar Remove] Bar: ${barIndex}, Step: ${stepIndex}`);
+        const bar = this.bars[barIndex];
+        if (!bar) return;
+
+        bar.beats.forEach((beat, bIndex) => {
+            this.removeStep(barIndex, bIndex, stepIndex);
+        });
+    }
+
     nextNote() {
         const secondsPerBeat = 60.0 / this.bpm;
         const currentBar = this.bars[this.currentBarIndex];
@@ -440,6 +450,7 @@ class UI {
         this.ctxAddBarBtn = document.getElementById('ctx-add-step-bar');
         this.ctxAddAllBtn = document.getElementById('ctx-add-step-all');
         this.ctxDelBtn = document.getElementById('ctx-del-step');
+        this.ctxDelBarBtn = document.getElementById('ctx-del-step-bar');
         this.ctxDelAllBtn = document.getElementById('ctx-del-step-all');
         this.ctxTarget = { bar: -1, beat: -1, step: -1 };
 
@@ -581,6 +592,16 @@ class UI {
             this.ctxMenu.classList.add('hidden');
         });
 
+        this.ctxDelBarBtn.addEventListener('click', () => {
+            const t = this.ctxTarget;
+            console.log("Ctx: Del Bar", t);
+            if (t.bar !== -1 && t.step !== -1) {
+                this.seq.removeStepBar(t.bar, t.step);
+                this.renderGrid();
+            }
+            this.ctxMenu.classList.add('hidden');
+        });
+
         this.ctxDelAllBtn.addEventListener('click', () => {
             const t = this.ctxTarget;
             console.log("Ctx: Del All", t);
@@ -621,23 +642,38 @@ class UI {
                 const beatHeader = document.createElement('div');
                 beatHeader.className = 'beat-header';
 
-                const select = document.createElement('select');
-                select.className = 'beat-subdiv-select';
-                [4, 3, 2, 6, 8, 12].forEach(val => {
-                    const opt = document.createElement('option');
-                    opt.value = val;
-                    opt.innerText = val;
-                    if (beat.subdivision === val) opt.selected = true;
-                    select.appendChild(opt);
-                });
+                const ctrlContainer = document.createElement('div');
+                ctrlContainer.className = 'beat-subdiv-ctrl';
 
-                select.addEventListener('change', (e) => {
-                    const newSubdiv = parseInt(e.target.value);
+                // Minus Btn
+                const minusBtn = document.createElement('button');
+                minusBtn.innerText = '-';
+                minusBtn.className = 'subdiv-btn';
+                minusBtn.addEventListener('click', () => {
+                    const newSubdiv = Math.max(1, beat.subdivision - 1);
                     this.seq.updateBeatSubdivision(barIndex, bIndex, newSubdiv);
                     this.renderGrid();
                 });
 
-                beatHeader.appendChild(select);
+                // Value Display
+                const display = document.createElement('span');
+                display.innerText = beat.subdivision;
+                display.className = 'subdiv-val';
+
+                // Plus Btn
+                const plusBtn = document.createElement('button');
+                plusBtn.innerText = '+';
+                plusBtn.className = 'subdiv-btn';
+                plusBtn.addEventListener('click', () => {
+                    this.seq.updateBeatSubdivision(barIndex, bIndex, beat.subdivision + 1);
+                    this.renderGrid();
+                });
+
+                ctrlContainer.appendChild(minusBtn);
+                ctrlContainer.appendChild(display);
+                ctrlContainer.appendChild(plusBtn);
+
+                beatHeader.appendChild(ctrlContainer);
                 systemContainer.appendChild(beatHeader);
             });
 
