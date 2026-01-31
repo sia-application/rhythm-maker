@@ -224,6 +224,8 @@ main {
     /* Columns defined in JS */
     gap: 8px;
     padding: 10px;
+    align-items: center;
+    /* Center vertically */
 }
 
 /* Grid Items */
@@ -269,12 +271,53 @@ main {
     box-shadow: 0 0 20px #fff;
 }
 
-.beat-marker {
-    border-left: 2px solid rgba(255, 255, 255, 0.2) !important;
-}
+/* Remove Beat Markers - handled by structural gap/cells now */
 
 /* Beat separators */
-.sequencer-grid>div:nth-child(4n + 1) {
-    /* To be handled dynamically via JS classes ideally */
-    position: relative;
+/* Beat Header Controls */
+.beat-header {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 5px;
+}
+
+.beat-subdiv-select {
+    background: rgba(0, 0, 0, 0.5);
+    color: var(--text-muted);
+    border: 1px solid var(--glass-border);
+    border-radius: 4px;
+    font-size: 0.8rem;
+    padding: 2px;
+}/* Context Menu */
+#context-menu {
+    position: fixed;
+    background: #1a1d26;
+    border: 1px solid var(--glass-border);
+    border-radius: 8px;
+    padding: 5px 0;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    min-width: 150px;
+}
+
+#context-menu.hidden {
+    display: none;
+}
+
+.menu-item {
+    padding: 8px 16px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    color: var(--text-main);
+}
+
+.menu-item:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.menu-item.disabled {
+    color: var(--text-muted);
+    pointer-events: none;
+    opacity: 0.5;
 }
