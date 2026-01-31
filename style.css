@@ -270,10 +270,12 @@ main {
 }
 
 .bar-del-btn:hover {
-    background: #ff4444;
+    background: rgba(255, 0, 0, 0.3);
     color: white;
     transform: scale(1.1);
-    border-color: #ff4444;
+    border-color: rgba(255, 255, 255, 0.5);
+    /* Settle for a subtle border or matching transparent red? Matching transparent red border might look weird if background acts as fill. Let's make border transparent or keep it light. Original beat-del-btn has no border. */
+    border-color: transparent;
 }
 
 /* Grid Items */
