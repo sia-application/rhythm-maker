@@ -192,6 +192,16 @@ input[type="range"]::-webkit-slider-thumb {
     box-shadow: 0 0 10px var(--primary-glow);
 }
 
+/* Main Container */
+main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+    width: 100%;
+}
+
 /* Sequencer Grid */
 #sequencer-view {
     flex: 1;
@@ -284,9 +294,13 @@ input[type="range"]::-webkit-slider-thumb {
 }
 
 #game-view {
+    flex: 1;
+    display: flex;
+    /* Ensure it overrides hidden-view display:none when active-view class is applied (which sets display:flex) - actually active-view handles it, but flex:1 is needed */
     flex-direction: column;
     justify-content: space-between;
     align-items: center;
+    width: 100%;
 }
 
 .game-area {

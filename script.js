@@ -190,21 +190,29 @@ class Sequencer {
     }
 
     play() {
-        if (this.isPlaying) return;
-
         if (!this.audio.isInitialized) this.audio.init();
 
-        this.isPlaying = true;
-        this.currentStep = 0;
-        this.nextNoteTime = this.audio.ctx.currentTime + 0.1;
-        this.scheduler();
+        if (this.isPlaying) {
+            // PAUSE
+            this.isPlaying = false;
+            clearTimeout(this.timerID);
+            // We do NOT reset currentStep so we can resume
+            ui.updatePlayButton(false);
+        } else {
+            // PLAY (or RESUME)
+            this.isPlaying = true;
+            this.nextNoteTime = this.audio.ctx.currentTime + 0.1;
+            this.scheduler();
+            ui.updatePlayButton(true);
+        }
     }
 
     stop() {
         this.isPlaying = false;
         clearTimeout(this.timerID);
-        // Reset UI
+        this.currentStep = 0; // Reset
         ui.clearHighlights();
+        ui.updatePlayButton(false);
     }
 
     updateSettings(bpm, timeSig, subdiv) {
@@ -228,6 +236,7 @@ class UI {
         this.bpmDisplay = document.getElementById('bpm-display');
         this.timeSigSelect = document.getElementById('time-sig-select');
         this.subdivSelect = document.getElementById('subdiv-select');
+        this.playBtn = document.getElementById('play-btn');
 
         this.setupListeners();
         this.renderGrid();
@@ -235,7 +244,7 @@ class UI {
 
     setupListeners() {
         // Controls
-        document.getElementById('play-btn').addEventListener('click', () => this.seq.play());
+        this.playBtn.addEventListener('click', () => this.seq.play());
         document.getElementById('stop-btn').addEventListener('click', () => this.seq.stop());
         document.getElementById('clear-btn').addEventListener('click', () => {
             this.seq.instruments.forEach(inst => this.seq.pattern[inst].fill(false));
@@ -322,6 +331,11 @@ class UI {
     clearHighlights() {
         document.querySelectorAll('.current-step').forEach(el => el.classList.remove('current-step'));
     }
+
+    updatePlayButton(isPlaying) {
+        const icon = this.playBtn.querySelector('span');
+        icon.innerText = isPlaying ? "||" : "▶";
+    }
 }
 
 class GameMode {
@@ -339,7 +353,6 @@ class GameMode {
         // Runtime
         this.notes = []; // { id, time, hit, element, type }
         this.startTime = 0;
-        this.animationFrame = null;
 
         // Elements
         this.view = document.getElementById('game-view');
@@ -353,7 +366,7 @@ class GameMode {
 
     setupListeners() {
         document.getElementById('toggle-game-mode').addEventListener('click', () => this.toggleMode());
-        document.getElementById('close-game-btn').addEventListener('click', () => this.stopGame());
+        // Close button removed from HTML, so listener removed here
 
         // Input handling
         // We capture keydown or click
@@ -379,11 +392,19 @@ class GameMode {
         document.addEventListener('keydown', (e) => {
             if (e.code === 'Space' || e.key === 'f' || e.key === 'j') handleInput(e);
         });
-        this.view.addEventListener('mousedown', (e) => handleInput(e));
-        this.view.addEventListener('touchstart', (e) => {
-            e.preventDefault();
+
+        // Listen to document to catch all clicks/taps
+        document.addEventListener('mousedown', (e) => {
+            // Ignore clicks on buttons/inputs
+            if (e.target.closest('button, input, select')) return;
             handleInput(e);
         });
+
+        document.addEventListener('touchstart', (e) => {
+            if (e.target.closest('button, input, select')) return;
+            e.preventDefault();
+            handleInput(e);
+        }, { passive: false });
     }
 
     toggleMode() {
@@ -405,7 +426,7 @@ class GameMode {
             this.trackHeight = rect.height;
             this.judgmentLineY = this.trackHeight * 0.8; // Match CSS bottom: 20%
 
-            this.messageEl.innerText = "Press PLAY to Start";
+            this.messageEl.innerHTML = "Press PLAY to Start<br><span style='font-size:0.5em'>Controls: Space, F, J, or Click</span>";
             this.messageEl.style.opacity = 1;
         }
     }
@@ -421,7 +442,6 @@ class GameMode {
         this.view.classList.replace('active-view', 'hidden-view');
         seqView.classList.replace('hidden-view', 'active-view');
 
-        cancelAnimationFrame(this.animationFrame);
         this.clearNotes();
         this.resetScore();
     }
@@ -553,8 +573,7 @@ class GameMode {
                 this.notes.splice(i, 1);
             }
         }
-
-        this.animationFrame = requestAnimationFrame(() => this.update(this.seq.audio.ctx.currentTime));
+        // Removed recursive requestAnimationFrame as it is handled by the global loop
     }
 }
 
