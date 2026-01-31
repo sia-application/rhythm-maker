@@ -222,6 +222,28 @@ class Sequencer {
         }
     }
 
+    addBeat(barIndex) {
+        if (!this.bars[barIndex]) return;
+        const bar = this.bars[barIndex];
+        // Add beat definition
+        bar.beats.push({ subdivision: 4 });
+        // Add beat data to tracks
+        bar.tracks.forEach(track => {
+            track.pattern.push(new Array(4).fill(false));
+        });
+    }
+
+    removeBeat(barIndex) {
+        if (!this.bars[barIndex]) return;
+        const bar = this.bars[barIndex];
+        if (bar.beats.length <= 1) return; // Keep at least 1 beat
+
+        bar.beats.pop();
+        bar.tracks.forEach(track => {
+            track.pattern.pop();
+        });
+    }
+
     updateBeatSubdivision(barIndex, beatIndex, newSubdiv) {
         if (!this.bars[barIndex]) return;
         const bar = this.bars[barIndex];
@@ -631,11 +653,44 @@ class UI {
 
             // 1. Header (Subdivision)
             const emptyHeader = document.createElement('div');
-            emptyHeader.innerText = `Bar ${barIndex + 1}`;
             emptyHeader.className = 'grid-row-label';
             emptyHeader.style.color = '#8b9bb4';
             emptyHeader.style.fontSize = '0.9rem';
             emptyHeader.style.paddingLeft = '5px';
+            emptyHeader.style.display = 'flex';
+            emptyHeader.style.alignItems = 'center';
+            emptyHeader.style.gap = '5px';
+
+            const labelSpan = document.createElement('span');
+            labelSpan.innerText = `Bar ${barIndex + 1}`;
+            emptyHeader.appendChild(labelSpan);
+
+            // Per-Bar Beat Control
+            const beatCtrl = document.createElement('div');
+            beatCtrl.className = 'beat-subdiv-ctrl'; // Reuse style
+
+            const minusBeatBtn = document.createElement('button');
+            minusBeatBtn.innerText = '-';
+            minusBeatBtn.className = 'subdiv-btn';
+            minusBeatBtn.title = 'Remove Beat';
+            minusBeatBtn.addEventListener('click', () => {
+                this.seq.removeBeat(barIndex);
+                this.renderGrid();
+            });
+
+            const plusBeatBtn = document.createElement('button');
+            plusBeatBtn.innerText = '+';
+            plusBeatBtn.className = 'subdiv-btn';
+            plusBeatBtn.title = 'Add Beat';
+            plusBeatBtn.addEventListener('click', () => {
+                this.seq.addBeat(barIndex);
+                this.renderGrid();
+            });
+
+            beatCtrl.appendChild(minusBeatBtn);
+            beatCtrl.appendChild(plusBeatBtn);
+            emptyHeader.appendChild(beatCtrl);
+
             systemContainer.appendChild(emptyHeader);
 
             bar.beats.forEach((beat, bIndex) => {
