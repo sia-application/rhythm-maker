@@ -426,6 +426,35 @@ class Sequencer {
         });
     }
 
+    setStepState(barIndex, trackIndex, beatIndex, stepIndex, state) {
+        if (this.bars[barIndex] && this.bars[barIndex].tracks[trackIndex]) {
+            const track = this.bars[barIndex].tracks[trackIndex];
+            if (track.pattern[beatIndex]) {
+                track.pattern[beatIndex][stepIndex] = state;
+            }
+        }
+    }
+
+    setColumnState(barIndex, beatIndex, stepIndex, state) {
+        if (this.bars[barIndex]) {
+            this.bars[barIndex].tracks.forEach(track => {
+                if (track.pattern[beatIndex] && stepIndex < track.pattern[beatIndex].length) {
+                    track.pattern[beatIndex][stepIndex] = state;
+                }
+            });
+        }
+    }
+
+    setGlobalState(state) {
+        this.bars.forEach(bar => {
+            bar.tracks.forEach(track => {
+                track.pattern.forEach(beatPattern => {
+                    beatPattern.fill(state);
+                });
+            });
+        });
+    }
+
     nextNote() {
         const secondsPerBeat = 60.0 / this.bpm;
         const currentBar = this.bars[this.currentBarIndex];
@@ -682,11 +711,13 @@ class UI {
                 // We need bar index too!
                 // Add data-bar to elements
                 let barIndex = -1;
+                let trackIndex = -1;
                 let beatIndex = -1;
                 let stepIndex = -1;
 
                 if (btn) {
                     barIndex = parseInt(btn.dataset.bar);
+                    trackIndex = parseInt(btn.dataset.track);
                     beatIndex = parseInt(btn.dataset.beat);
                     stepIndex = parseInt(btn.dataset.step);
 
@@ -700,11 +731,12 @@ class UI {
                         beatIndex = parseInt(firstBtn.dataset.beat);
                     }
                     stepIndex = -1;
+                    trackIndex = -1;
                     this.ctxDelBtn.classList.add('disabled');
                     this.ctxDelBtn.innerText = "Delete This Step";
                 }
 
-                this.ctxTarget = { bar: barIndex, beat: beatIndex, step: stepIndex };
+                this.ctxTarget = { bar: barIndex, track: trackIndex, beat: beatIndex, step: stepIndex };
 
                 this.ctxMenu.style.left = `${e.clientX}px`;
                 this.ctxMenu.style.top = `${e.clientY}px`;
@@ -776,6 +808,29 @@ class UI {
             }
             this.ctxMenu.classList.add('hidden');
         });
+
+        // New Selection Helpers
+        const setupSelItem = (id, action, state) => {
+            document.getElementById(id).addEventListener('click', () => {
+                const t = this.ctxTarget;
+                if (action === 'step' && t.bar !== -1 && t.track !== -1 && t.beat !== -1 && t.step !== -1) {
+                    this.seq.setStepState(t.bar, t.track, t.beat, t.step, state);
+                } else if (action === 'col' && t.bar !== -1 && t.beat !== -1 && t.step !== -1) {
+                    this.seq.setColumnState(t.bar, t.beat, t.step, state);
+                } else if (action === 'all') {
+                    this.seq.setGlobalState(state);
+                }
+                this.renderGrid();
+                this.ctxMenu.classList.add('hidden');
+            });
+        };
+
+        setupSelItem('ctx-sel-step', 'step', true);
+        setupSelItem('ctx-sel-col', 'col', true);
+        setupSelItem('ctx-sel-all', 'all', true);
+        setupSelItem('ctx-unsel-step', 'step', false);
+        setupSelItem('ctx-unsel-col', 'col', false);
+        setupSelItem('ctx-unsel-all', 'all', false);
     }
 
     renderGrid() {
@@ -985,6 +1040,7 @@ class UI {
 
                         // ID for highlighting (Need bar/beat/step)
                         btn.dataset.bar = barIndex;
+                        btn.dataset.track = tIndex;
                         btn.dataset.beat = bIndex;
                         btn.dataset.step = s;
 
