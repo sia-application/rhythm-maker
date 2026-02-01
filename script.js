@@ -478,6 +478,18 @@ class Sequencer {
         });
     }
 
+    removeStepGlobal(stepIndex) {
+        console.log(`[Sequencer] removeStepGlobal: Step ${stepIndex}`);
+        this.bars.forEach((bar, barIndex) => {
+            bar.beats.forEach((beat, bIndex) => {
+                const targetIndex = (stepIndex === -1) ? -1 : Math.min(stepIndex, beat.subdivision - 1);
+                if (targetIndex !== -1) {
+                    this.removeStep(barIndex, bIndex, targetIndex);
+                }
+            });
+        });
+    }
+
     setStepState(barIndex, trackIndex, beatIndex, stepIndex, state) {
         if (this.bars[barIndex] && this.bars[barIndex].tracks[trackIndex]) {
             const track = this.bars[barIndex].tracks[trackIndex];
@@ -658,6 +670,7 @@ class UI {
         this.ctxDelBtn = document.getElementById('ctx-del-step');
         this.ctxDelBarBtn = document.getElementById('ctx-del-step-bar');
         this.ctxDelAllBtn = document.getElementById('ctx-del-step-all');
+        this.ctxDelGlobalBtn = document.getElementById('ctx-del-step-global');
         this.ctxTarget = { bar: -1, beat: -1, step: -1 };
 
         this.setupListeners();
@@ -776,11 +789,15 @@ class UI {
 
                     this.ctxDelBtn.classList.remove('disabled');
                     this.ctxDelBtn.innerText = `Bar${barIndex + 1}: ステップ${stepIndex + 1}を削除`;
+                    this.ctxAddBtn.innerText = `ステップ${stepIndex + 1}の右隣にステップを追加`;
                     this.ctxAddBarBtn.innerText = `Bar${barIndex + 1}全体にステップを右隣に追加`;
                     this.ctxDelBarBtn.innerText = `Bar${barIndex + 1}の指定位置ステップを全て削除`;
+                    this.ctxDelGlobalBtn.innerText = `全てのSTEP${stepIndex + 1}を削除`;
                     this.ctxAddGlobalBtn.innerText = `全てのSTEP${stepIndex + 1}の右隣にステップを追加`;
+                    this.ctxAddAllBtn.innerText = `列全体のSTEP${stepIndex + 1}の右隣にステップを追加`;
                     this.ctxDelAllBtn.classList.remove('disabled');
                     this.ctxDelBarBtn.classList.remove('disabled');
+                    this.ctxDelGlobalBtn.classList.remove('disabled');
                     this.ctxAddGlobalBtn.classList.remove('disabled');
                 } else if (beatCell) {
                     // Try to find first button to get metadata
@@ -793,11 +810,15 @@ class UI {
                     trackIndex = -1;
                     this.ctxDelBtn.classList.add('disabled');
                     this.ctxDelBtn.innerText = "選択箇所を削除";
+                    this.ctxAddBtn.innerText = "ステップの右隣に追加";
                     this.ctxAddBarBtn.innerText = `Bar${barIndex + 1}全体にステップを末尾に追加`;
                     this.ctxDelBarBtn.innerText = `Bar${barIndex + 1}の指定位置を削除`;
+                    this.ctxDelGlobalBtn.innerText = "全ての拍の同位置を削除";
                     this.ctxAddGlobalBtn.innerText = "全ての拍の末尾にステップを追加";
+                    this.ctxAddAllBtn.innerText = "列全体にステップを右隣に追加";
                     this.ctxDelAllBtn.classList.add('disabled');
                     this.ctxDelBarBtn.classList.add('disabled');
+                    this.ctxDelGlobalBtn.classList.add('disabled');
                     this.ctxAddGlobalBtn.classList.remove('disabled');
                 }
 
@@ -873,6 +894,16 @@ class UI {
             console.log("UI: Del Step Bar Clicked", t);
             if (t.bar !== -1 && t.step !== -1) {
                 this.seq.removeStepBar(t.bar, t.step);
+                this.renderGrid();
+            }
+            this.ctxMenu.classList.add('hidden');
+        });
+
+        this.ctxDelGlobalBtn.addEventListener('click', () => {
+            const t = this.ctxTarget;
+            console.log("UI: Del Step Global Clicked", t);
+            if (t.step !== -1) {
+                this.seq.removeStepGlobal(t.step);
                 this.renderGrid();
             }
             this.ctxMenu.classList.add('hidden');
