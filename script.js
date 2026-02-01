@@ -509,6 +509,56 @@ class Sequencer {
         }
     }
 
+    setColumnAllBarsState(beatIndex, stepIndex, state) {
+        console.log(`[Sequencer] setColumnAllBarsState: Beat ${beatIndex}, Step ${stepIndex}, State ${state}`);
+        this.bars.forEach(bar => {
+            if (beatIndex < bar.beats.length) {
+                bar.tracks.forEach(track => {
+                    if (track.pattern[beatIndex] && stepIndex < track.pattern[beatIndex].length) {
+                        track.pattern[beatIndex][stepIndex] = state;
+                    }
+                });
+            }
+        });
+    }
+
+    setBarStepState(barIndex, stepIndex, state) {
+        console.log(`[Sequencer] setBarStepState: Bar ${barIndex}, Step ${stepIndex}, State ${state}`);
+        if (this.bars[barIndex]) {
+            this.bars[barIndex].beats.forEach((beat, beatIndex) => {
+                this.bars[barIndex].tracks.forEach(track => {
+                    if (track.pattern[beatIndex] && stepIndex < track.pattern[beatIndex].length) {
+                        track.pattern[beatIndex][stepIndex] = state;
+                    }
+                });
+            });
+        }
+    }
+
+    setBarState(barIndex, state) {
+        console.log(`[Sequencer] setBarState: Bar ${barIndex}, State ${state}`);
+        if (this.bars[barIndex]) {
+            this.bars[barIndex].tracks.forEach(track => {
+                track.pattern.forEach(beatPattern => {
+                    beatPattern.fill(state);
+                });
+            });
+        }
+    }
+
+    setGlobalStepState(stepIndex, state) {
+        console.log(`[Sequencer] setGlobalStepState: Step ${stepIndex}, State ${state}`);
+        this.bars.forEach(bar => {
+            bar.beats.forEach((beat, bIdx) => {
+                bar.tracks.forEach(track => {
+                    if (track.pattern[bIdx] && stepIndex < track.pattern[bIdx].length) {
+                        track.pattern[bIdx][stepIndex] = state;
+                    }
+                });
+            });
+        });
+    }
+
     setGlobalState(state) {
         this.bars.forEach(bar => {
             bar.tracks.forEach(track => {
@@ -678,6 +728,8 @@ class UI {
         this.ctxUnselStepBtn = document.getElementById('ctx-unsel-step');
         this.ctxUnselColBtn = document.getElementById('ctx-unsel-col');
         this.ctxUnselAllBtn = document.getElementById('ctx-unsel-all');
+        this.ctxSelGlobalStepBtn = document.getElementById('ctx-sel-global');
+        this.ctxUnselGlobalStepBtn = document.getElementById('ctx-unsel-global');
 
         this.ctxTarget = { bar: -1, beat: -1, step: -1 };
 
@@ -807,8 +859,12 @@ class UI {
 
                     this.ctxSelStepBtn.innerText = `指定のステップ${stepIndex + 1}を選択`;
                     this.ctxSelColBtn.innerText = `列全体のステップ${stepIndex + 1}を選択`;
+                    this.ctxSelAllBtn.innerText = `Bar${barIndex + 1}全体のステップ${stepIndex + 1}を選択`;
                     this.ctxUnselStepBtn.innerText = `指定のステップ${stepIndex + 1}を選択解除`;
                     this.ctxUnselColBtn.innerText = `列全体のステップ${stepIndex + 1}を選択解除`;
+                    this.ctxUnselAllBtn.innerText = `Bar${barIndex + 1}全体のステップ${stepIndex + 1}を選択解除`;
+                    this.ctxSelGlobalStepBtn.innerText = `プロジェクト全体のステップ${stepIndex + 1}を選択`;
+                    this.ctxUnselGlobalStepBtn.innerText = `プロジェクト全体のステップ${stepIndex + 1}を選択解除`;
 
                     this.ctxDelAllBtn.classList.remove('disabled');
                     this.ctxDelBarBtn.classList.remove('disabled');
@@ -816,8 +872,12 @@ class UI {
                     this.ctxAddGlobalBtn.classList.remove('disabled');
                     this.ctxSelStepBtn.classList.remove('disabled');
                     this.ctxSelColBtn.classList.remove('disabled');
+                    this.ctxSelAllBtn.classList.remove('disabled');
                     this.ctxUnselStepBtn.classList.remove('disabled');
                     this.ctxUnselColBtn.classList.remove('disabled');
+                    this.ctxUnselAllBtn.classList.remove('disabled');
+                    this.ctxSelGlobalStepBtn.classList.remove('disabled');
+                    this.ctxUnselGlobalStepBtn.classList.remove('disabled');
                 } else if (beatCell) {
                     // Try to find first button to get metadata
                     const firstBtn = beatCell.querySelector('.step-btn');
@@ -839,8 +899,12 @@ class UI {
 
                     this.ctxSelStepBtn.innerText = "指定のステップを選択";
                     this.ctxSelColBtn.innerText = "列全体のステップを選択";
+                    this.ctxSelAllBtn.innerText = "Bar全体のステップを選択";
                     this.ctxUnselStepBtn.innerText = "指定のステップを選択解除";
                     this.ctxUnselColBtn.innerText = "列全体のステップを選択解除";
+                    this.ctxUnselAllBtn.innerText = "Bar全体のステップを選択解除";
+                    this.ctxSelGlobalStepBtn.innerText = "プロジェクト全体のステップを選択";
+                    this.ctxUnselGlobalStepBtn.innerText = "プロジェクト全体のステップを選択解除";
 
                     this.ctxDelAllBtn.classList.add('disabled');
                     this.ctxDelBarBtn.classList.add('disabled');
@@ -848,8 +912,12 @@ class UI {
                     this.ctxAddGlobalBtn.classList.remove('disabled');
                     this.ctxSelStepBtn.classList.add('disabled');
                     this.ctxSelColBtn.classList.add('disabled');
+                    this.ctxSelAllBtn.classList.add('disabled');
                     this.ctxUnselStepBtn.classList.add('disabled');
                     this.ctxUnselColBtn.classList.add('disabled');
+                    this.ctxUnselAllBtn.classList.add('disabled');
+                    this.ctxSelGlobalStepBtn.classList.add('disabled');
+                    this.ctxUnselGlobalStepBtn.classList.add('disabled');
                 }
 
                 this.ctxTarget = { bar: barIndex, track: trackIndex, beat: beatIndex, step: stepIndex };
@@ -945,10 +1013,17 @@ class UI {
                 const t = this.ctxTarget;
                 if (action === 'step' && t.bar !== -1 && t.track !== -1 && t.beat !== -1 && t.step !== -1) {
                     this.seq.setStepState(t.bar, t.track, t.beat, t.step, state);
-                } else if (action === 'col' && t.bar !== -1 && t.beat !== -1 && t.step !== -1) {
-                    this.seq.setColumnState(t.bar, t.beat, t.step, state);
-                } else if (action === 'all') {
-                    this.seq.setGlobalState(state);
+                } else if (action === 'col' && t.beat !== -1 && t.step !== -1) {
+                    // "Whole column" selection should be global across bars to match other column actions
+                    this.seq.setColumnAllBarsState(t.beat, t.step, state);
+                } else if (action === 'all' && t.bar !== -1 && t.step !== -1) {
+                    // "Whole Bar Step" selection (locally labeled 'all') should target the current bar's specific step
+                    this.seq.setBarStepState(t.bar, t.step, state);
+                } else if (action === 'global-step' && t.step !== -1) {
+                    this.seq.setGlobalStepState(t.step, state);
+                } else if (action === 'all' && t.bar !== -1) {
+                    // Fallback to older Bar Selection if for some reason step is -1
+                    this.seq.setBarState(t.bar, state);
                 }
                 this.renderGrid();
                 this.ctxMenu.classList.add('hidden');
@@ -958,9 +1033,11 @@ class UI {
         setupSelItem('ctx-sel-step', 'step', true);
         setupSelItem('ctx-sel-col', 'col', true);
         setupSelItem('ctx-sel-all', 'all', true);
+        setupSelItem('ctx-sel-global', 'global-step', true);
         setupSelItem('ctx-unsel-step', 'step', false);
         setupSelItem('ctx-unsel-col', 'col', false);
         setupSelItem('ctx-unsel-all', 'all', false);
+        setupSelItem('ctx-unsel-global', 'global-step', false);
     }
 
     renderGrid() {
