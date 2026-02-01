@@ -232,6 +232,7 @@ class Sequencer {
         this.updateScheduleAheadTime();
         this.timerID = null;
         this.scheduledTimeouts = []; // Track UI and note timeouts
+        this.isEndOfProject = false; // Internal flag for 'stop' mode
 
         // Initial setup
         this.lastSelectedInstrument = 'metronome';
@@ -641,13 +642,27 @@ class Sequencer {
                 this.currentBeatIndex = 0;
                 this.currentBarIndex++;
                 if (this.currentBarIndex >= this.bars.length) {
-                    // End of Project
+                    // End of Project reached
                     if (this.playbackMode === 'stop') {
-                        this.stop();
+                        this.isEndOfProject = true; // Stop scheduling new bars
+                        // Trigger the UI reset and real STOP only after the scheduled lookahead has finished
+                        const lastStepDuration = (this.scheduleAheadTime + 0.5) * 1000;
+                        const finalStopId = setTimeout(() => {
+                            if (this.isEndOfProject && this.isPlaying) {
+                                this.stop();
+                            }
+                        }, lastStepDuration);
+                        this.scheduledTimeouts.push(finalStopId);
+
+                        this.currentBarIndex = 0;
+                        this.currentBeatIndex = 0;
+                        this.currentStepInBeat = 0;
                         return;
                     }
                     // Loop Sequence
                     this.currentBarIndex = 0;
+                    this.currentBeatIndex = 0;
+                    this.currentStepInBeat = 0;
                 }
             }
         }
@@ -716,9 +731,12 @@ class Sequencer {
     }
 
     scheduler() {
-        while (this.nextNoteTime < this.audio.ctx.currentTime + this.scheduleAheadTime) {
+        if (!this.isPlaying) return;
+        // Only schedule if we haven't reached the end in stop mode
+        while (!this.isEndOfProject && this.nextNoteTime < this.audio.ctx.currentTime + this.scheduleAheadTime) {
             this.scheduleNote(this.currentBarIndex, this.currentBeatIndex, this.currentStepInBeat, this.nextNoteTime);
             this.nextNote();
+            if (!this.isPlaying) return;
         }
         this.timerID = setTimeout(() => this.scheduler(), this.lookahead);
     }
@@ -750,10 +768,17 @@ class Sequencer {
             this.audio.masterGain.gain.exponentialRampToValueAtTime(targetVol, now + 0.01);
 
             this.nextNoteTime = now + 0.1;
+            this.isEndOfProject = false; // Reset for new play session
 
             // --- RESUME INDEX GUARD ---
+            // If in stop mode and we reached the end previously, reset to start
+            if (this.playbackMode === 'stop' && (this.currentBarIndex >= this.bars.length || this.currentBarIndex < 0)) {
+                this.currentBarIndex = 0;
+                this.currentBeatIndex = 0;
+                this.currentStepInBeat = 0;
+            }
             // Handles both -1 (from removeBar) and out of bounds
-            if (this.currentBarIndex < 0 || this.currentBarIndex >= this.bars.length) {
+            else if (this.currentBarIndex < 0 || this.currentBarIndex >= this.bars.length) {
                 this.currentBarIndex = 0;
                 this.currentBeatIndex = 0;
                 this.currentStepInBeat = 0;
@@ -780,14 +805,16 @@ class Sequencer {
         clearTimeout(this.timerID);
         this.clearScheduledTimeouts();
         this.audio.stopAll();
+        if (window.ui) {
+            ui.clearHighlights();
+            if (ui.game) {
+                ui.game.clearActiveNotes();
+            }
+            ui.updatePlayButton(false);
+        }
         this.currentBarIndex = 0;
         this.currentBeatIndex = 0;
         this.currentStepInBeat = 0;
-        ui.clearHighlights();
-        if (ui.game) {
-            ui.game.clearActiveNotes();
-        }
-        ui.updatePlayButton(false);
     }
 
     updateSettings(bpm, timeSig) {
@@ -1287,8 +1314,11 @@ class UI {
         // Playback Mode
         if (this.playbackModeSelect) {
             this.playbackModeSelect.addEventListener('change', (e) => {
+                console.log("UI: Playback mode changed to:", e.target.value);
                 this.seq.playbackMode = e.target.value;
             });
+            // Initial sync
+            this.seq.playbackMode = this.playbackModeSelect.value;
         }
 
     }
