@@ -772,12 +772,11 @@ class Sequencer {
         } else {
             // PLAY (or RESUME)
             if (typeof ui !== 'undefined' && ui.isGameMode) {
-                // Determine countdown duration (3 beats: 3, 2, 1 -> GO starts on 4th beat)
-                const countdownDuration = (60 / this.bpm) * 3;
-                ui.startCountdown(this.bpm, () => {
-                    // This callback fires when countdown reaches GO phase
-                });
+                // Determine countdown duration (4 beats: 3, 2, 1, GO -> Music starts @ 5th beat)
+                const countdownDuration = (60 / this.bpm) * 4;
+                const now = this.audio.ctx.currentTime;
                 this.startPlayback(countdownDuration);
+                ui.startCountdown(this.bpm, now);
             } else {
                 this.startPlayback(0);
             }
@@ -788,18 +787,18 @@ class Sequencer {
         if (this.isPlaying) return; // Guard
         this.isPlaying = true;
         const now = this.audio.ctx.currentTime;
-        const startTime = now + delay + 0.1;
+        // If delay is 0 (direct play), we add a tiny 0.1s buffer to ensure we don't skip the very first note.
+        // If delay > 0 (countdown), we use the exact future beat to ensure perfect sync.
+        const startTime = delay > 0 ? (now + delay) : (now + 0.1);
 
         // Re-activate master gain if it was ramped down
         this.audio.masterGain.gain.cancelScheduledValues(now);
         const targetVol = parseFloat(ui.masterVol.value);
 
         if (delay > 0) {
-            // Mute audio during countdown (optional, but safer if user has notes at 0.0s)
-            // Actually, we WANT silence during countdown. 
-            // We'll set the gain to ramp up only at startTime.
+            // Ensure volume is UP immediately so we can hear the countdown blips
             this.audio.masterGain.gain.setValueAtTime(0.001, now);
-            this.audio.masterGain.gain.exponentialRampToValueAtTime(targetVol, startTime);
+            this.audio.masterGain.gain.exponentialRampToValueAtTime(targetVol, now + 0.05);
         } else {
             this.audio.masterGain.gain.setValueAtTime(0.001, now);
             this.audio.masterGain.gain.exponentialRampToValueAtTime(targetVol, now + 0.01);
@@ -1230,44 +1229,52 @@ class UI {
         console.log("UI: Initialized successfully");
     }
 
-    startCountdown(bpm, onComplete) {
-        if (!this.isGameMode) {
-            onComplete();
-            return;
-        }
+    startCountdown(bpm, baseTime = null) {
+        if (!this.isGameMode) return;
 
+        console.log("UI: Starting countdown at BPM:", bpm);
         this.countdownOverlay.classList.remove('hidden');
         const beatTime = 60 / bpm;
-        const beatDurationMs = beatTime * 1000;
+        this.countdownNumber.style.setProperty('--beat-time', `${beatTime}s`);
 
-        // Sync CSS animation with BPM
-        this.countdownNumber.style.animationDuration = `${beatTime}s`;
+        const startTime = baseTime !== null ? baseTime : this.seq.audio.ctx.currentTime;
+        const labels = ["3", "2", "1", "GO!"];
+        let lastBeatIndex = -1;
 
-        const now = this.seq.audio.ctx.currentTime;
-
-        // Precise Audio Scheduling for the 4 counts (3, 2, 1, GO)
-        for (let i = 0; i < 3; i++) {
-            this.seq.audio.playInstrument('metronome', now + i * beatTime);
+        // Schedule countdown audio blips precisely
+        for (let i = 0; i < 4; i++) {
+            const isGo = (i === 3);
+            this.seq.audio.playInstrument('metronome', startTime + i * beatTime, isGo ? 1.5 : 1.0);
         }
-        // Accented GO sound exactly at the 4th beat
-        this.seq.audio.playInstrument('metronome', now + 3 * beatTime, 1.5);
 
-        let count = 3;
-        const updateCount = () => {
-            if (count > 0) {
-                this.countdownNumber.innerText = count;
-                count--;
-                setTimeout(updateCount, beatDurationMs);
-            } else {
-                this.countdownNumber.innerText = "GO!";
-                setTimeout(() => {
-                    this.countdownOverlay.classList.add('hidden');
-                    if (onComplete) onComplete();
-                }, beatDurationMs);
+        const syncUI = () => {
+            if (!this.seq || !this.seq.isPlaying) {
+                this.countdownOverlay.classList.add('hidden');
+                return;
             }
+
+            const contextTime = this.seq.audio.ctx.currentTime;
+            const elapsed = contextTime - startTime;
+            const currentBeatIndex = Math.floor(elapsed / beatTime + 0.05); // slight epsilon
+
+            if (currentBeatIndex !== lastBeatIndex) {
+                if (currentBeatIndex < 4) {
+                    this.countdownNumber.innerText = labels[currentBeatIndex];
+                    // Retrigger animation
+                    this.countdownNumber.classList.remove('countdown-pulse');
+                    this.countdownNumber.offsetHeight; // force reflow
+                    this.countdownNumber.classList.add('countdown-pulse');
+                } else {
+                    // Hide when music starts
+                    this.countdownOverlay.classList.add('hidden');
+                    return; // End of countdown
+                }
+                lastBeatIndex = currentBeatIndex;
+            }
+            requestAnimationFrame(syncUI);
         };
 
-        updateCount();
+        syncUI();
     }
 
     setupListeners() {

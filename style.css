@@ -881,7 +881,13 @@ main {
     font-weight: 900;
     color: var(--primary-color);
     text-shadow: 0 0 50px var(--primary-glow);
-    animation: countdown-bounce 0.8s ease-out infinite;
+    /* Animation is triggered via JS to sync with Audio clock */
+    transform: scale(1);
+    opacity: 1;
+}
+
+.countdown-pulse {
+    animation: countdown-bounce var(--beat-time, 0.5s) ease-out forwards;
 }
 
 @keyframes countdown-bounce {
