@@ -11,10 +11,16 @@ class AudioEngine {
         // Instruments
         this.instruments = {
             'kick': { freq: 150, decay: 0.5, type: 'sine' },
+            'bassdrum': { freq: 60, decay: 0.8, type: 'sine' },
             'snare': { freq: 200, decay: 0.2, type: 'noise' },
             'hihat': { freq: 800, decay: 0.1, type: 'noise' },
             'openhihat': { freq: 800, decay: 0.4, type: 'noise' },
-            'tom': { freq: 100, decay: 0.4, type: 'triangle' },
+            'pedalhat': { freq: 500, decay: 0.05, type: 'noise' },
+            'tomH': { freq: 200, decay: 0.3, type: 'triangle' },
+            'tomM': { freq: 140, decay: 0.4, type: 'triangle' },
+            'tomL': { freq: 90, decay: 0.5, type: 'triangle' },
+            'ride': { freq: 400, decay: 0.8, type: 'ride' },
+            'crash': { freq: 200, decay: 1.5, type: 'noise' },
             'clap': { freq: 0, decay: 0.3, type: 'noise' },
             'rim': { freq: 1000, decay: 0.02, type: 'square' },
             'cowbell': { freq: 540, decay: 0.1, type: 'cowbell' },
@@ -99,8 +105,17 @@ class AudioEngine {
             case 'kick':
                 this.playTone(t, 'sine', 150, 0.5);
                 break;
-            case 'tom':
-                this.playTone(t, 'triangle', 100, 0.4);
+            case 'bassdrum':
+                this.playTone(t, 'sine', 60, 0.8);
+                break;
+            case 'tomH':
+                this.playTone(t, 'triangle', 200, 0.3);
+                break;
+            case 'tomM':
+                this.playTone(t, 'triangle', 140, 0.4);
+                break;
+            case 'tomL':
+                this.playTone(t, 'triangle', 90, 0.5);
                 break;
             case 'snare':
                 this.playTone(t, 'triangle', 200, 0.1); // Body
@@ -111,6 +126,16 @@ class AudioEngine {
                 break;
             case 'openhihat':
                 this.playNoise(t, 0.4);
+                break;
+            case 'pedalhat':
+                this.playNoise(t, 0.08); // Slightly longer than closed hihat
+                break;
+            case 'crash':
+                this.playNoise(t, 1.5); // Long noise decay
+                break;
+            case 'ride':
+                this.playTone(t, 'square', 400, 0.1); // Ping body
+                this.playNoise(t, 0.8); // Resonance
                 break;
             case 'clap':
                 // Clap is 3 tiny bursts + 1 decay
