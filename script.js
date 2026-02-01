@@ -771,45 +771,70 @@ class Sequencer {
             ui.updatePlayButton(false);
         } else {
             // PLAY (or RESUME)
-            this.isPlaying = true;
+            if (typeof ui !== 'undefined' && ui.isGameMode) {
+                // Determine countdown duration (4 beats: 3, 2, 1, GO)
+                const countdownDuration = (60 / this.bpm) * 4;
+                ui.startCountdown(this.bpm, () => {
+                    // This callback fires when countdown reaches GO phase
+                });
+                this.startPlayback(countdownDuration);
+            } else {
+                this.startPlayback(0);
+            }
+        }
+    }
 
-            // Re-activate master gain if it was ramped down
-            this.audio.masterGain.gain.cancelScheduledValues(now);
-            const targetVol = parseFloat(ui.masterVol.value);
+    startPlayback(delay = 0) {
+        if (this.isPlaying) return; // Guard
+        this.isPlaying = true;
+        const now = this.audio.ctx.currentTime;
+        const startTime = now + delay + 0.1;
+
+        // Re-activate master gain if it was ramped down
+        this.audio.masterGain.gain.cancelScheduledValues(now);
+        const targetVol = parseFloat(ui.masterVol.value);
+
+        if (delay > 0) {
+            // Mute audio during countdown (optional, but safer if user has notes at 0.0s)
+            // Actually, we WANT silence during countdown. 
+            // We'll set the gain to ramp up only at startTime.
+            this.audio.masterGain.gain.setValueAtTime(0.001, now);
+            this.audio.masterGain.gain.exponentialRampToValueAtTime(targetVol, startTime);
+        } else {
             this.audio.masterGain.gain.setValueAtTime(0.001, now);
             this.audio.masterGain.gain.exponentialRampToValueAtTime(targetVol, now + 0.01);
+        }
 
-            this.nextNoteTime = now + 0.1;
-            this.isEndOfProject = false; // Reset for new play session
+        this.nextNoteTime = startTime;
+        this.isEndOfProject = false; // Reset for new play session
 
-            // --- RESUME INDEX GUARD ---
-            // If in stop mode and we reached the end previously, reset to start
-            if (this.playbackMode === 'stop' && (this.currentBarIndex >= this.bars.length || this.currentBarIndex < 0)) {
-                this.currentBarIndex = 0;
-                this.currentBeatIndex = 0;
-                this.currentStepInBeat = 0;
-            }
-            // Handles both -1 (from removeBar) and out of bounds
-            else if (this.currentBarIndex < 0 || this.currentBarIndex >= this.bars.length) {
-                this.currentBarIndex = 0;
+        // --- RESUME INDEX GUARD ---
+        // If in stop mode and we reached the end previously, reset to start
+        if (this.playbackMode === 'stop' && (this.currentBarIndex >= this.bars.length || this.currentBarIndex < 0)) {
+            this.currentBarIndex = 0;
+            this.currentBeatIndex = 0;
+            this.currentStepInBeat = 0;
+        }
+        // Handles both -1 (from removeBar) and out of bounds
+        else if (this.currentBarIndex < 0 || this.currentBarIndex >= this.bars.length) {
+            this.currentBarIndex = 0;
+            this.currentBeatIndex = 0;
+            this.currentStepInBeat = 0;
+        } else {
+            const bar = this.bars[this.currentBarIndex];
+            if (this.currentBeatIndex >= bar.beats.length) {
                 this.currentBeatIndex = 0;
                 this.currentStepInBeat = 0;
             } else {
-                const bar = this.bars[this.currentBarIndex];
-                if (this.currentBeatIndex >= bar.beats.length) {
-                    this.currentBeatIndex = 0;
+                const beat = bar.beats[this.currentBeatIndex];
+                if (this.currentStepInBeat >= beat.subdivision) {
                     this.currentStepInBeat = 0;
-                } else {
-                    const beat = bar.beats[this.currentBeatIndex];
-                    if (this.currentStepInBeat >= beat.subdivision) {
-                        this.currentStepInBeat = 0;
-                    }
                 }
             }
-
-            this.scheduler();
-            ui.updatePlayButton(true);
         }
+
+        this.scheduler();
+        ui.updatePlayButton(true);
     }
 
     stop() {
@@ -836,7 +861,6 @@ class Sequencer {
             this.timeSignature = timeSig;
             // How to handle existing bars?
             // Resize all existing bars to new timeSig?
-            // This might destruct data.
             this.bars.forEach(bar => {
                 const oldBeats = bar.beats;
                 const newBeats = [];
@@ -1193,6 +1217,8 @@ class UI {
         this.gameSpeedVal = document.getElementById('game-speed-val');
         this.hitCriteriaSelect = document.getElementById('hit-criteria-select');
         this.playbackModeSelect = document.getElementById('playback-mode-select');
+        this.countdownOverlay = document.getElementById('countdown-overlay');
+        this.countdownNumber = this.countdownOverlay.querySelector('.countdown-number');
         this.game = new RhythmGame(this.seq);
         this.isGameMode = false;
 
@@ -1202,6 +1228,36 @@ class UI {
         this.setupContextMenu();
         this.renderGrid();
         console.log("UI: Initialized successfully");
+    }
+
+    startCountdown(bpm, onComplete) {
+        if (!this.isGameMode) {
+            onComplete();
+            return;
+        }
+
+        this.countdownOverlay.classList.remove('hidden');
+        const beatDuration = (60 / bpm) * 1000;
+        let count = 3;
+
+        const updateCount = () => {
+            if (count > 0) {
+                this.countdownNumber.innerText = count;
+                // Play metronome sound for each count
+                this.seq.audio.playInstrument('metronome');
+                count--;
+                setTimeout(updateCount, beatDuration);
+            } else {
+                this.countdownNumber.innerText = "GO!";
+                this.seq.audio.playInstrument('metronome', this.seq.audio.ctx.currentTime, 1.5); // Accented GO
+                setTimeout(() => {
+                    this.countdownOverlay.classList.add('hidden');
+                    if (onComplete) onComplete();
+                }, beatDuration); // Display GO for one full beat
+            }
+        };
+
+        updateCount();
     }
 
     setupListeners() {
