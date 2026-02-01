@@ -713,7 +713,8 @@ class Sequencer {
                 this.scheduledTimeouts.push(aid);
 
                 // Trigger Game Note (Lead-time unchanged so visuals work)
-                if (this.onNoteTrigger) {
+                // SPEC: 'nogame' notes play sound but don't show up in game mode
+                if (track.pattern[beatIndex][stepInBeat] !== 'nogame' && this.onNoteTrigger) {
                     const travelTime = 2.0 / this.noteSpeed;
                     const spawnDelay = (time - travelTime - now) * 1000;
                     const tid = setTimeout(() => {
@@ -1180,6 +1181,11 @@ class UI {
         this.ctxSelGlobalStepBtn = document.getElementById('ctx-sel-global');
         this.ctxUnselGlobalStepBtn = document.getElementById('ctx-unsel-global');
 
+        this.ctxSelNogameStepBtn = document.getElementById('ctx-sel-nogame-step');
+        this.ctxSelNogameColBtn = document.getElementById('ctx-sel-nogame-col');
+        this.ctxSelNogameBarBtn = document.getElementById('ctx-sel-nogame-bar');
+        this.ctxSelNogameGlobalBtn = document.getElementById('ctx-sel-nogame-global');
+
         this.viewToggleBtn = document.getElementById('view-toggle-btn');
         this.sequencerView = document.getElementById('sequencer-view');
         this.gameView = document.getElementById('game-view');
@@ -1377,8 +1383,13 @@ class UI {
                     this.ctxUnselStepBtn.innerText = `指定のステップ${stepIndex + 1}を選択解除`;
                     this.ctxUnselColBtn.innerText = `列全体のステップ${stepIndex + 1}を選択解除`;
                     this.ctxUnselAllBtn.innerText = `Bar${barIndex + 1}全体のステップ${stepIndex + 1}を選択解除`;
-                    this.ctxSelGlobalStepBtn.innerText = `プロジェクト全体のステップ${stepIndex + 1}を選択`;
                     this.ctxUnselGlobalStepBtn.innerText = `プロジェクト全体のステップ${stepIndex + 1}を選択解除`;
+                    this.ctxSelGlobalStepBtn.innerText = `プロジェクト全体のステップ${stepIndex + 1}を選択`;
+
+                    this.ctxSelNogameStepBtn.innerText = `指定のステップ${stepIndex + 1}を選択(No Game)`;
+                    this.ctxSelNogameColBtn.innerText = `列全体のステップ${stepIndex + 1}を選択(No Game)`;
+                    this.ctxSelNogameBarBtn.innerText = `Bar${barIndex + 1}全体のステップ${stepIndex + 1}を選択(No Game)`;
+                    this.ctxSelNogameGlobalBtn.innerText = `プロジェクト全体のステップ${stepIndex + 1}を選択(No Game)`;
 
                     this.ctxDelAllBtn.classList.remove('disabled');
                     this.ctxDelBarBtn.classList.remove('disabled');
@@ -1392,6 +1403,11 @@ class UI {
                     this.ctxUnselAllBtn.classList.remove('disabled');
                     this.ctxSelGlobalStepBtn.classList.remove('disabled');
                     this.ctxUnselGlobalStepBtn.classList.remove('disabled');
+
+                    this.ctxSelNogameStepBtn.classList.remove('disabled');
+                    this.ctxSelNogameColBtn.classList.remove('disabled');
+                    this.ctxSelNogameBarBtn.classList.remove('disabled');
+                    this.ctxSelNogameGlobalBtn.classList.remove('disabled');
                 } else if (beatCell) {
                     // Try to find first button to get metadata
                     const firstBtn = beatCell.querySelector('.step-btn');
@@ -1420,6 +1436,11 @@ class UI {
                     this.ctxSelGlobalStepBtn.innerText = "プロジェクト全体のステップを選択";
                     this.ctxUnselGlobalStepBtn.innerText = "プロジェクト全体のステップを選択解除";
 
+                    this.ctxSelNogameStepBtn.innerText = "指定のステップを選択(No Game)";
+                    this.ctxSelNogameColBtn.innerText = "列全体のステップを選択(No Game)";
+                    this.ctxSelNogameBarBtn.innerText = "Bar全体のステップを選択(No Game)";
+                    this.ctxSelNogameGlobalBtn.innerText = "プロジェクト全体のステップを選択(No Game)";
+
                     this.ctxDelAllBtn.classList.add('disabled');
                     this.ctxDelBarBtn.classList.add('disabled');
                     this.ctxDelGlobalBtn.classList.add('disabled');
@@ -1432,6 +1453,11 @@ class UI {
                     this.ctxUnselAllBtn.classList.add('disabled');
                     this.ctxSelGlobalStepBtn.classList.add('disabled');
                     this.ctxUnselGlobalStepBtn.classList.add('disabled');
+
+                    this.ctxSelNogameStepBtn.classList.add('disabled');
+                    this.ctxSelNogameColBtn.classList.add('disabled');
+                    this.ctxSelNogameBarBtn.classList.add('disabled');
+                    this.ctxSelNogameGlobalBtn.classList.add('disabled');
                 }
 
                 this.ctxTarget = { bar: barIndex, track: trackIndex, beat: beatIndex, step: stepIndex };
@@ -1571,6 +1597,11 @@ class UI {
         setupSelItem('ctx-unsel-col', 'col', false);
         setupSelItem('ctx-unsel-all', 'all', false);
         setupSelItem('ctx-unsel-global', 'global-step', false);
+
+        setupSelItem('ctx-sel-nogame-step', 'step', 'nogame');
+        setupSelItem('ctx-sel-nogame-col', 'col', 'nogame');
+        setupSelItem('ctx-sel-nogame-bar', 'all', 'nogame');
+        setupSelItem('ctx-sel-nogame-global', 'global-step', 'nogame');
     }
 
     renderGrid() {
@@ -1775,7 +1806,12 @@ class UI {
                         const btn = document.createElement('div');
                         btn.className = `step-btn ${track.type}`;
                         if (track.pattern[bIndex] && track.pattern[bIndex][s]) {
-                            btn.classList.add('active');
+                            const noteState = track.pattern[bIndex][s];
+                            if (noteState === 'nogame') {
+                                btn.classList.add('nogame');
+                            } else {
+                                btn.classList.add('active');
+                            }
                         }
 
                         // ID for highlighting (Need bar/beat/step)
@@ -1788,7 +1824,16 @@ class UI {
                             e.stopPropagation();
                             if (!this.seq.audio.isInitialized) this.seq.audio.init();
                             this.seq.toggleStep(barIndex, tIndex, bIndex, s);
-                            btn.classList.toggle('active');
+
+                            // Re-check state from sequence and update classes reliably
+                            const updatedState = track.pattern[bIndex][s];
+                            btn.classList.remove('active', 'nogame');
+                            if (updatedState === 'nogame') {
+                                btn.classList.add('nogame');
+                            } else if (updatedState === true) {
+                                btn.classList.add('active');
+                            }
+
                             if (!this.seq.isPlaying) {
                                 this.seq.audio.playInstrument(track.type);
                             }

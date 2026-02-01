@@ -393,9 +393,15 @@ main {
     background: rgba(255, 255, 255, 0.2);
 }
 
-.step-btn.active.current-step {
-    background: #fff;
-    box-shadow: 0 0 20px #fff;
+.step-btn.nogame {
+    background: #00ff88 !important;
+    box-shadow: 0 0 15px rgba(0, 255, 136, 0.6) !important;
+    border-color: #00ff88 !important;
+}
+
+.step-btn.nogame.current-step {
+    background: #fff !important;
+    box-shadow: 0 0 20px #fff !important;
 }
 
 /* Remove Beat Markers - handled by structural gap/cells now */
