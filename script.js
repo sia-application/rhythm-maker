@@ -65,8 +65,9 @@ class AudioEngine {
         osc.connect(gain);
         gain.connect(this.masterGain);
 
-        this.activeNodes.add(osc);
-        osc.onended = () => this.activeNodes.delete(osc);
+        const nodeEntry = { source: osc, gain: gain };
+        this.activeNodes.add(nodeEntry);
+        osc.onended = () => this.activeNodes.delete(nodeEntry);
 
         osc.start(time);
         osc.stop(time + decay);
@@ -98,23 +99,37 @@ class AudioEngine {
         filter.connect(gain);
         gain.connect(this.masterGain);
 
-        this.activeNodes.add(noise);
-        noise.onended = () => this.activeNodes.delete(noise);
+        const nodeEntry = { source: noise, gain: gain };
+        this.activeNodes.add(nodeEntry);
+        noise.onended = () => this.activeNodes.delete(nodeEntry);
 
         noise.start(time);
-        // noise stop is automatic as it's a buffer source with specific length
+        noise.stop(time + decay); // Explicit stop
     }
 
     stopAll() {
         if (!this.ctx) return;
+        const fadeOutTime = 0.05; // 50ms fade out to prevent clicks
+        const now = this.ctx.currentTime;
         this.activeNodes.forEach(node => {
             try {
-                node.stop();
+                // Ramp down the gain of the specific node
+                node.gain.gain.cancelScheduledValues(now);
+                node.gain.gain.setValueAtTime(node.gain.gain.value, now);
+                node.gain.gain.exponentialRampToValueAtTime(0.001, now + fadeOutTime);
+                node.source.stop(now + fadeOutTime);
             } catch (e) {
-                // Ignore errors if node already stopped
+                // Ignore if node already stopped
             }
         });
         this.activeNodes.clear();
+
+        // Also ramp down master gain briefly to handle any other lingering sounds
+        if (this.masterGain) {
+            this.masterGain.gain.cancelScheduledValues(now);
+            this.masterGain.gain.setValueAtTime(this.masterGain.gain.value, now);
+            this.masterGain.gain.exponentialRampToValueAtTime(0.001, now + fadeOutTime);
+        }
     }
 
     playInstrument(name, time = 0, trackVolume = 1.0) {
@@ -217,6 +232,7 @@ class Sequencer {
         this.playbackMode = 'loop'; // 'loop' or 'stop'
         this.updateScheduleAheadTime();
         this.timerID = null;
+        this.scheduledTimeouts = []; // Track UI and note timeouts
 
         // Initial setup
         this.lastSelectedInstrument = 'metronome';
@@ -649,26 +665,31 @@ class Sequencer {
 
                 // Trigger Game Note
                 if (this.onNoteTrigger) {
-                    const travelTime = 2.0 / this.noteSpeed; // travel time to the line in SECONDS
+                    const travelTime = 2.0 / this.noteSpeed;
                     const spawnDelay = (time - travelTime - now) * 1000;
-                    // We call it for all notes in lookahead.
-                    // spawnNote will handle negative delay for notes that should have started.
-                    setTimeout(() => {
+                    const tid = setTimeout(() => {
                         if (this.isPlaying) {
                             this.onNoteTrigger(barIndex, tIndex, time);
                         }
                     }, spawnDelay);
+                    this.scheduledTimeouts.push(tid);
                 }
             }
         });
 
         // Update UI
         const drawTime = (time - now) * 1000;
-        setTimeout(() => {
+        const tid2 = setTimeout(() => {
             if (this.isPlaying) {
                 ui.highlightStep(barIndex, beatIndex, stepInBeat);
             }
         }, Math.max(0, drawTime));
+        this.scheduledTimeouts.push(tid2);
+    }
+
+    clearScheduledTimeouts() {
+        this.scheduledTimeouts.forEach(tid => clearTimeout(tid));
+        this.scheduledTimeouts = [];
     }
 
     scheduler() {
@@ -682,16 +703,27 @@ class Sequencer {
     play() {
         if (!this.audio.isInitialized) this.audio.init();
 
+        const now = this.audio.ctx.currentTime;
+
         if (this.isPlaying) {
             // PAUSE
             this.isPlaying = false;
             clearTimeout(this.timerID);
+            this.clearScheduledTimeouts();
             this.audio.stopAll();
+            ui.clearHighlights();
             ui.updatePlayButton(false);
         } else {
             // PLAY (or RESUME)
             this.isPlaying = true;
-            this.nextNoteTime = this.audio.ctx.currentTime + 0.1;
+
+            // Re-activate master gain if it was ramped down
+            this.audio.masterGain.gain.cancelScheduledValues(now);
+            const targetVol = parseFloat(ui.masterVol.value);
+            this.audio.masterGain.gain.setValueAtTime(0.001, now);
+            this.audio.masterGain.gain.exponentialRampToValueAtTime(targetVol, now + 0.05);
+
+            this.nextNoteTime = now + 0.1;
             // Ensure we start from valid indices
             if (this.currentBarIndex >= this.bars.length) this.currentBarIndex = 0;
 
@@ -703,6 +735,7 @@ class Sequencer {
     stop() {
         this.isPlaying = false;
         clearTimeout(this.timerID);
+        this.clearScheduledTimeouts();
         this.audio.stopAll();
         this.currentBarIndex = 0;
         this.currentBeatIndex = 0;
