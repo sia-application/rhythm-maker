@@ -563,11 +563,12 @@ class UI {
         this.seq = sequencer;
         this.grid = document.getElementById('sequencer-grid');
         this.bpmInput = document.getElementById('bpm-input');
-        this.bpmDisplay = document.getElementById('bpm-display');
+        this.bpmNumber = document.getElementById('bpm-number');
         this.timeSigSelect = document.getElementById('time-sig-select');
         this.subdivSelect = document.getElementById('subdiv-select');
         this.playBtn = document.getElementById('play-btn');
         this.masterVol = document.getElementById('master-vol');
+        this.volNumber = document.getElementById('vol-number');
         this.ctxMenu = document.getElementById('context-menu');
         this.ctxAddBtn = document.getElementById('ctx-add-step');
         this.ctxAddBarBtn = document.getElementById('ctx-add-step-bar');
@@ -596,11 +597,50 @@ class UI {
         });
 
         // Settings
-        this.bpmInput.addEventListener('input', (e) => {
-            const val = parseInt(e.target.value);
-            this.bpmDisplay.innerText = val;
-            this.seq.updateSettings(val, this.seq.timeSignature);
-        });
+        // BPM sync
+        const updateBpm = (val) => {
+            let num = parseInt(val);
+            if (isNaN(num)) return;
+            num = Math.max(20, Math.min(999, num));
+            this.seq.bpm = num;
+            this.seq.updateSettings(num, this.seq.timeSignature);
+            this.bpmInput.value = num;
+            if (this.bpmNumber) this.bpmNumber.value = num;
+        };
+
+        this.bpmInput.addEventListener('input', (e) => updateBpm(e.target.value));
+        if (this.bpmNumber) {
+            this.bpmNumber.addEventListener('change', (e) => updateBpm(e.target.value));
+        }
+
+        // Volume sync
+        const updateVol = (val, isSlider) => {
+            let v = parseFloat(val);
+            if (isNaN(v)) return;
+
+            let sliderVal, numberVal;
+            if (isSlider) {
+                sliderVal = v;
+                numberVal = Math.round(v * 100);
+            } else {
+                numberVal = Math.max(0, Math.min(100, Math.round(v)));
+                sliderVal = numberVal / 100;
+            }
+
+            this.masterVol.value = sliderVal;
+            if (this.volNumber) this.volNumber.value = numberVal;
+
+            if (this.seq.audio.isInitialized) {
+                this.seq.audio.masterGain.gain.setTargetAtTime(sliderVal, this.seq.audio.ctx.currentTime, 0.05);
+            }
+        };
+
+        if (this.masterVol) {
+            this.masterVol.addEventListener('input', (e) => updateVol(e.target.value, true));
+        }
+        if (this.volNumber) {
+            this.volNumber.addEventListener('change', (e) => updateVol(e.target.value, false));
+        }
 
         const updateParams = () => {
             this.seq.updateSettings(
@@ -610,13 +650,6 @@ class UI {
         };
 
         this.timeSigSelect.addEventListener('change', updateParams);
-        if (this.masterVol) {
-            this.masterVol.addEventListener('input', (e) => {
-                if (this.seq.audio.isInitialized) {
-                    this.seq.audio.masterGain.gain.setTargetAtTime(parseFloat(e.target.value), this.seq.audio.ctx.currentTime, 0.05);
-                }
-            });
-        }
 
         // "Set All" subdivision
         this.subdivSelect.addEventListener('change', (e) => {

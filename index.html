@@ -35,8 +35,19 @@
                 </div>
 
                 <div class="control-group">
-                    <label for="bpm-input">BPM: <span id="bpm-display">120</span></label>
-                    <input type="range" id="bpm-input" min="20" max="999" value="120">
+                    <label for="bpm-input">BPM</label>
+                    <div class="input-row">
+                        <input type="number" id="bpm-number" min="20" max="999" value="120" class="number-input">
+                        <input type="range" id="bpm-input" min="20" max="999" value="120">
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label for="master-vol">Volume</label>
+                    <div class="input-row">
+                        <input type="number" id="vol-number" min="0" max="100" value="50" class="number-input">
+                        <input type="range" id="master-vol" min="0" max="1" step="0.01" value="0.5" class="range-input">
+                    </div>
                 </div>
 
                 <div class="control-group">
@@ -59,11 +70,6 @@
                         <option value="9">9連符</option>
                         <option value="12">12連符</option>
                     </select>
-                </div>
-
-                <div class="control-group">
-                    <label>Volume</label>
-                    <input type="range" id="master-vol" min="0" max="1" step="0.01" value="0.5" class="range-input">
                 </div>
 
                 <div class="control-group">
