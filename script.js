@@ -1148,9 +1148,20 @@ class RhythmGame {
         });
         this.activeNotes = [];
 
-        // Also clear any floating judgments and reset status
+        // Also clear any floating judgments
         const floats = this.container.querySelectorAll('.judgment-float');
         floats.forEach(el => el.remove());
+        if (this.statusEl) {
+            this.statusEl.innerText = '';
+            this.statusEl.className = 'game-status';
+        }
+    }
+
+    resetStats() {
+        this.score = 0;
+        this.combo = 0;
+        this.hitCount = 0;
+        this.updateUI();
         if (this.statusEl) {
             this.statusEl.innerText = '';
             this.statusEl.className = 'game-status';
@@ -1163,8 +1174,12 @@ class RhythmGame {
         el.innerText = text;
         this.container.appendChild(el);
         setTimeout(() => el.remove(), 500);
-        this.statusEl.innerText = text;
-        this.statusEl.className = `game-status ${className}`;
+
+        // Header status display is removed as per user request
+        if (this.statusEl) {
+            this.statusEl.innerText = text;
+            this.statusEl.className = `game-status ${className}`;
+        }
     }
 
     updateUI() {
@@ -1412,6 +1427,14 @@ class UI {
             });
             // Initial sync
             this.seq.playbackMode = this.playbackModeSelect.value;
+        }
+
+        // Game Stats Reset
+        const gameResetBtn = document.getElementById('game-reset-btn');
+        if (gameResetBtn) {
+            gameResetBtn.addEventListener('click', () => {
+                this.game.resetStats();
+            });
         }
 
     }
