@@ -922,9 +922,28 @@ class UI {
 
                 this.ctxTarget = { bar: barIndex, track: trackIndex, beat: beatIndex, step: stepIndex };
 
-                this.ctxMenu.style.left = `${e.clientX}px`;
-                this.ctxMenu.style.top = `${e.clientY}px`;
+                // Show first to get dimensions
                 this.ctxMenu.classList.remove('hidden');
+                const menuWidth = this.ctxMenu.offsetWidth;
+                const menuHeight = this.ctxMenu.offsetHeight;
+
+                let posX = e.clientX;
+                let posY = e.clientY;
+
+                // Adjust if overflowing viewport
+                if (posX + menuWidth > window.innerWidth) {
+                    posX = window.innerWidth - menuWidth - 10;
+                }
+                if (posY + menuHeight > window.innerHeight) {
+                    posY = window.innerHeight - menuHeight - 10;
+                }
+
+                // Ensure not negative
+                posX = Math.max(10, posX);
+                posY = Math.max(10, posY);
+
+                this.ctxMenu.style.left = `${posX}px`;
+                this.ctxMenu.style.top = `${posY}px`;
             }
         });
 
