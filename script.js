@@ -1108,6 +1108,7 @@ class UI {
 
         // 4. Global Action (Add Bar)
         const actionContainer = document.createElement('div');
+        actionContainer.style.width = '100%';
         actionContainer.style.textAlign = 'center';
         actionContainer.style.padding = '2px 20px';
         actionContainer.style.display = 'flex';
