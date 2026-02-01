@@ -708,6 +708,9 @@ class Sequencer {
         this.currentBeatIndex = 0;
         this.currentStepInBeat = 0;
         ui.clearHighlights();
+        if (ui.game) {
+            ui.game.clearActiveNotes();
+        }
         ui.updatePlayButton(false);
     }
 
@@ -766,7 +769,7 @@ class RhythmGame {
         this.comboEl = document.getElementById('game-combo');
         this.statusEl = document.getElementById('game-status');
         this.lanes = [];
-        this.activeNotes = []; // { el, time, lane, judged }
+        this.activeNotes = []; // { el, time, lane, judged, timeoutID }
         this.laneMap = {}; // trackIndex -> laneIndex
         this.isGameMode = false;
         this.hitCriteria = 'nice'; // 'nice', 'great', or 'excellent'
@@ -779,6 +782,7 @@ class RhythmGame {
         this.score = 0;
         this.combo = 0;
         this.hitCount = 0;
+        this.clearActiveNotes();
         this.totalNotes = this.calculateTotalNotes();
         console.log("RhythmGame: Initializing...", this.seq.bars);
         this.updateUI();
@@ -863,6 +867,10 @@ class RhythmGame {
         // Exact time it should hit judgment line (relative to performance.now)
         const perfTargetTime = now + (targetTime - audioNow) * 1000;
 
+        // Prevent duplicate notes at the same time and lane
+        const isDuplicate = this.activeNotes.some(n => n.lane === laneIndex && Math.abs(n.targetTime - perfTargetTime) < 50);
+        if (isDuplicate) return;
+
         // Calculate delay: if negative, we need to skip some animation
         const spawnDelayMs = perfTargetTime - travelTimeToLine - now;
 
@@ -875,12 +883,13 @@ class RhythmGame {
             el: note,
             targetTime: perfTargetTime,
             lane: laneIndex,
-            judged: false
+            judged: false,
+            timeoutID: null
         };
 
         this.activeNotes.push(noteObj);
 
-        setTimeout(() => {
+        noteObj.timeoutID = setTimeout(() => {
             if (!noteObj.judged) {
                 this.judgeNote(noteObj, Infinity);
             }
@@ -969,8 +978,37 @@ class RhythmGame {
         this.showJudgment(rating, ratingClass);
         this.updateUI();
 
-        if (rating !== 'MISS') {
-            note.el.style.opacity = '0';
+        if (note.el && diff !== Infinity) {
+            note.el.style.display = 'none';
+            note.el.remove();
+            // Clear the MISS judgment timeout since it was hit/missed early
+            if (note.timeoutID) {
+                clearTimeout(note.timeoutID);
+                note.timeoutID = null;
+            }
+            // Remove from activeNotes array immediately
+            const idx = this.activeNotes.indexOf(note);
+            if (idx > -1) this.activeNotes.splice(idx, 1);
+        }
+    }
+
+    clearActiveNotes() {
+        this.activeNotes.forEach(note => {
+            if (note.timeoutID) {
+                clearTimeout(note.timeoutID);
+            }
+            if (note.el) {
+                note.el.remove();
+            }
+        });
+        this.activeNotes = [];
+
+        // Also clear any floating judgments and reset status
+        const floats = this.container.querySelectorAll('.judgment-float');
+        floats.forEach(el => el.remove());
+        if (this.statusEl) {
+            this.statusEl.innerText = 'READY';
+            this.statusEl.className = 'game-status';
         }
     }
 
@@ -1737,8 +1775,15 @@ class UI {
     }
 
     updatePlayButton(isPlaying) {
-        const icon = this.playBtn.querySelector('span');
-        icon.innerText = isPlaying ? "||" : "▶";
+        if (isPlaying) {
+            this.playBtn.innerHTML = '<span style="font-family: monospace; font-size: 1.2rem; font-weight: 800; display: flex; align-items: center; justify-content: center; width: 24px; height: 24px;">||</span>';
+        } else {
+            this.playBtn.innerHTML = `
+                <svg viewBox="0 0 24 24" class="control-svg">
+                    <path d="M8 5v14l11-7z" fill="currentColor" />
+                </svg>`;
+        }
+        this.playBtn.classList.toggle('isPlaying', isPlaying);
     }
 }
 
