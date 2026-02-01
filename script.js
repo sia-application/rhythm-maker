@@ -791,7 +791,7 @@ class UI {
                     this.ctxDelBtn.innerText = `指定のステップ${stepIndex + 1}を削除`;
                     this.ctxAddBtn.innerText = `ステップ${stepIndex + 1}の右隣にステップを追加`;
                     this.ctxAddBarBtn.innerText = `Bar${barIndex + 1}全体のステップ${stepIndex + 1}の右隣にステップを追加`;
-                    this.ctxDelBarBtn.innerText = `Bar${barIndex + 1}の指定位置ステップを全て削除`;
+                    this.ctxDelBarBtn.innerText = `Bar${barIndex + 1}全体のステップ${stepIndex + 1}を全て削除`;
                     this.ctxDelAllBtn.innerText = `列全体のステップ${stepIndex + 1}を全て削除`;
                     this.ctxDelGlobalBtn.innerText = `全てのSTEP${stepIndex + 1}を削除`;
                     this.ctxAddGlobalBtn.innerText = `全てのSTEP${stepIndex + 1}の右隣にステップを追加`;
@@ -813,7 +813,7 @@ class UI {
                     this.ctxDelBtn.innerText = "選択箇所を削除";
                     this.ctxAddBtn.innerText = "ステップの右隣に追加";
                     this.ctxAddBarBtn.innerText = `Bar${barIndex + 1}全体のステップの右隣にステップを追加`;
-                    this.ctxDelBarBtn.innerText = `Bar${barIndex + 1}の指定位置を削除`;
+                    this.ctxDelBarBtn.innerText = `Bar${barIndex + 1}全体のステップを全て削除`;
                     this.ctxDelAllBtn.innerText = "列全体の指定ステップを全て削除";
                     this.ctxDelGlobalBtn.innerText = "全ての拍の同位置を削除";
                     this.ctxAddGlobalBtn.innerText = "全ての拍の末尾にステップを追加";
