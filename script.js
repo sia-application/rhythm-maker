@@ -1924,6 +1924,7 @@ class UI {
             const valLabel = document.createElement('div');
             valLabel.className = 'grid-row-label step-value-label';
             valLabel.innerText = 'Step Value';
+            valLabel.style.fontSize = '0.9rem';
             systemContainer.appendChild(valLabel);
 
             bar.beats.forEach((beat) => {
