@@ -1068,7 +1068,24 @@ class UI {
             bar.beats.forEach((beat) => {
                 const valCell = document.createElement('div');
                 valCell.className = 'beat-value-display';
-                valCell.innerText = (1 / beat.subdivision).toFixed(2);
+
+                // Logic: 
+                // 1. Show full decimal if it's terminating (only 2 and 5 as factors of denominator)
+                // 2. Show 2 decimals + "..." if it's repeating
+                const subdiv = beat.subdivision;
+                const val = 1 / subdiv;
+                let n = subdiv;
+                while (n > 0 && n % 2 === 0) n /= 2;
+                while (n > 0 && n % 5 === 0) n /= 5;
+
+                if (n === 1) {
+                    valCell.innerText = val.toString();
+                } else {
+                    // Truncate to 2 decimals without rounding (e.g., 0.166... -> 0.16...)
+                    const truncated = Math.floor(val * 100) / 100;
+                    valCell.innerText = truncated.toFixed(2) + "...";
+                }
+
                 systemContainer.appendChild(valCell);
             });
 
