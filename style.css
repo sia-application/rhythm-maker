@@ -303,11 +303,6 @@ main {
     border-color: var(--primary-color);
 }
 
-.step-btn.snare.active {
-    background: var(--secondary-color);
-    box-shadow: 0 0 10px var(--secondary-glow);
-    border-color: var(--secondary-color);
-}
 
 .step-btn.current-step {
     border-color: #fff;
