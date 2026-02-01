@@ -645,7 +645,18 @@ class Sequencer {
                     // End of Project reached
                     if (this.playbackMode === 'stop') {
                         this.isEndOfProject = true; // Stop scheduling new bars
-                        // Trigger the UI reset and real STOP only after the scheduled lookahead has finished
+
+                        // CLEAR HIGHLIGHTS: Schedule visual cleanup for the exact end of the last step
+                        const now = this.audio.ctx.currentTime;
+                        const clearTime = (this.nextNoteTime - now) * 1000;
+                        const clearTid = setTimeout(() => {
+                            if (typeof ui !== 'undefined' && ui && this.isEndOfProject && this.isPlaying) {
+                                ui.clearHighlights();
+                            }
+                        }, Math.max(0, clearTime));
+                        this.scheduledTimeouts.push(clearTid);
+
+                        // FINAL STOP: Trigger the UI reset and real STOP only after the audio lookahead buffer
                         const lastStepDuration = (this.scheduleAheadTime + 0.5) * 1000;
                         const finalStopId = setTimeout(() => {
                             if (this.isEndOfProject && this.isPlaying) {
@@ -805,7 +816,7 @@ class Sequencer {
         clearTimeout(this.timerID);
         this.clearScheduledTimeouts();
         this.audio.stopAll();
-        if (window.ui) {
+        if (typeof ui !== 'undefined' && ui) {
             ui.clearHighlights();
             if (ui.game) {
                 ui.game.clearActiveNotes();
