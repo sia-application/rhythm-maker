@@ -772,8 +772,8 @@ class Sequencer {
         } else {
             // PLAY (or RESUME)
             if (typeof ui !== 'undefined' && ui.isGameMode) {
-                // Determine countdown duration (4 beats: 3, 2, 1, GO)
-                const countdownDuration = (60 / this.bpm) * 4;
+                // Determine countdown duration (3 beats: 3, 2, 1 -> GO starts on 4th beat)
+                const countdownDuration = (60 / this.bpm) * 3;
                 ui.startCountdown(this.bpm, () => {
                     // This callback fires when countdown reaches GO phase
                 });
@@ -1237,23 +1237,33 @@ class UI {
         }
 
         this.countdownOverlay.classList.remove('hidden');
-        const beatDuration = (60 / bpm) * 1000;
-        let count = 3;
+        const beatTime = 60 / bpm;
+        const beatDurationMs = beatTime * 1000;
 
+        // Sync CSS animation with BPM
+        this.countdownNumber.style.animationDuration = `${beatTime}s`;
+
+        const now = this.seq.audio.ctx.currentTime;
+
+        // Precise Audio Scheduling for the 4 counts (3, 2, 1, GO)
+        for (let i = 0; i < 3; i++) {
+            this.seq.audio.playInstrument('metronome', now + i * beatTime);
+        }
+        // Accented GO sound exactly at the 4th beat
+        this.seq.audio.playInstrument('metronome', now + 3 * beatTime, 1.5);
+
+        let count = 3;
         const updateCount = () => {
             if (count > 0) {
                 this.countdownNumber.innerText = count;
-                // Play metronome sound for each count
-                this.seq.audio.playInstrument('metronome');
                 count--;
-                setTimeout(updateCount, beatDuration);
+                setTimeout(updateCount, beatDurationMs);
             } else {
                 this.countdownNumber.innerText = "GO!";
-                this.seq.audio.playInstrument('metronome', this.seq.audio.ctx.currentTime, 1.5); // Accented GO
                 setTimeout(() => {
                     this.countdownOverlay.classList.add('hidden');
                     if (onComplete) onComplete();
-                }, beatDuration); // Display GO for one full beat
+                }, beatDurationMs);
             }
         };
 
