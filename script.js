@@ -671,6 +671,14 @@ class UI {
         this.ctxDelBarBtn = document.getElementById('ctx-del-step-bar');
         this.ctxDelAllBtn = document.getElementById('ctx-del-step-all');
         this.ctxDelGlobalBtn = document.getElementById('ctx-del-step-global');
+
+        this.ctxSelStepBtn = document.getElementById('ctx-sel-step');
+        this.ctxSelColBtn = document.getElementById('ctx-sel-col');
+        this.ctxSelAllBtn = document.getElementById('ctx-sel-all');
+        this.ctxUnselStepBtn = document.getElementById('ctx-unsel-step');
+        this.ctxUnselColBtn = document.getElementById('ctx-unsel-col');
+        this.ctxUnselAllBtn = document.getElementById('ctx-unsel-all');
+
         this.ctxTarget = { bar: -1, beat: -1, step: -1 };
 
         this.setupListeners();
@@ -789,17 +797,27 @@ class UI {
 
                     this.ctxDelBtn.classList.remove('disabled');
                     this.ctxDelBtn.innerText = `指定のステップ${stepIndex + 1}を削除`;
-                    this.ctxAddBtn.innerText = `ステップ${stepIndex + 1}の右隣にステップを追加`;
+                    this.ctxAddBtn.innerText = `指定のステップ${stepIndex + 1}の右隣にステップを追加`;
                     this.ctxAddBarBtn.innerText = `Bar${barIndex + 1}全体のステップ${stepIndex + 1}の右隣にステップを追加`;
                     this.ctxDelBarBtn.innerText = `Bar${barIndex + 1}全体のステップ${stepIndex + 1}を全て削除`;
                     this.ctxDelAllBtn.innerText = `列全体のステップ${stepIndex + 1}を全て削除`;
                     this.ctxDelGlobalBtn.innerText = `全てのSTEP${stepIndex + 1}を削除`;
                     this.ctxAddGlobalBtn.innerText = `全てのSTEP${stepIndex + 1}の右隣にステップを追加`;
                     this.ctxAddAllBtn.innerText = `列全体のSTEP${stepIndex + 1}の右隣にステップを追加`;
+
+                    this.ctxSelStepBtn.innerText = `指定のステップ${stepIndex + 1}を選択`;
+                    this.ctxSelColBtn.innerText = `列全体のステップ${stepIndex + 1}を選択`;
+                    this.ctxUnselStepBtn.innerText = `指定のステップ${stepIndex + 1}を選択解除`;
+                    this.ctxUnselColBtn.innerText = `列全体のステップ${stepIndex + 1}を選択解除`;
+
                     this.ctxDelAllBtn.classList.remove('disabled');
                     this.ctxDelBarBtn.classList.remove('disabled');
                     this.ctxDelGlobalBtn.classList.remove('disabled');
                     this.ctxAddGlobalBtn.classList.remove('disabled');
+                    this.ctxSelStepBtn.classList.remove('disabled');
+                    this.ctxSelColBtn.classList.remove('disabled');
+                    this.ctxUnselStepBtn.classList.remove('disabled');
+                    this.ctxUnselColBtn.classList.remove('disabled');
                 } else if (beatCell) {
                     // Try to find first button to get metadata
                     const firstBtn = beatCell.querySelector('.step-btn');
@@ -811,17 +829,27 @@ class UI {
                     trackIndex = -1;
                     this.ctxDelBtn.classList.add('disabled');
                     this.ctxDelBtn.innerText = "選択箇所を削除";
-                    this.ctxAddBtn.innerText = "ステップの右隣に追加";
+                    this.ctxAddBtn.innerText = "指定のステップの右隣に追加";
                     this.ctxAddBarBtn.innerText = `Bar${barIndex + 1}全体のステップの右隣にステップを追加`;
                     this.ctxDelBarBtn.innerText = `Bar${barIndex + 1}全体のステップを全て削除`;
                     this.ctxDelAllBtn.innerText = "列全体の指定ステップを全て削除";
                     this.ctxDelGlobalBtn.innerText = "全ての拍の同位置を削除";
                     this.ctxAddGlobalBtn.innerText = "全ての拍の末尾にステップを追加";
                     this.ctxAddAllBtn.innerText = "列全体にステップを右隣に追加";
+
+                    this.ctxSelStepBtn.innerText = "指定のステップを選択";
+                    this.ctxSelColBtn.innerText = "列全体のステップを選択";
+                    this.ctxUnselStepBtn.innerText = "指定のステップを選択解除";
+                    this.ctxUnselColBtn.innerText = "列全体のステップを選択解除";
+
                     this.ctxDelAllBtn.classList.add('disabled');
                     this.ctxDelBarBtn.classList.add('disabled');
                     this.ctxDelGlobalBtn.classList.add('disabled');
                     this.ctxAddGlobalBtn.classList.remove('disabled');
+                    this.ctxSelStepBtn.classList.add('disabled');
+                    this.ctxSelColBtn.classList.add('disabled');
+                    this.ctxUnselStepBtn.classList.add('disabled');
+                    this.ctxUnselColBtn.classList.add('disabled');
                 }
 
                 this.ctxTarget = { bar: barIndex, track: trackIndex, beat: beatIndex, step: stepIndex };
