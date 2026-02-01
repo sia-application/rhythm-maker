@@ -971,7 +971,7 @@ class RhythmGame {
             bar.tracks.forEach(track => {
                 track.pattern.forEach(beatPattern => {
                     beatPattern.forEach(step => {
-                        if (step) count++;
+                        if (step === true) count++;
                     });
                 });
             });
@@ -1116,6 +1116,9 @@ class RhythmGame {
 
         if (isHit) {
             this.hitCount++;
+            if (this.totalNotes > 0 && this.hitCount > this.totalNotes) {
+                this.hitCount = 0; // Reset to 0 as requested by user
+            }
         }
 
         this.score += scoreAdd;
