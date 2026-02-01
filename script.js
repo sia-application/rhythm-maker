@@ -1061,10 +1061,7 @@ class UI {
 
             // 3. Footer row: Subdivision Values
             const valLabel = document.createElement('div');
-            valLabel.className = 'grid-row-label';
-            valLabel.style.color = 'var(--text-muted)';
-            valLabel.style.fontSize = '0.75rem';
-            valLabel.style.paddingLeft = '5px';
+            valLabel.className = 'grid-row-label step-value-label';
             valLabel.innerText = 'Step Value';
             systemContainer.appendChild(valLabel);
 
