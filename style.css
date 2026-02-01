@@ -276,27 +276,45 @@ main {
 .sequencer-container {
     width: 100%;
     height: 100%;
-    display: block;
-    /* changed from flex to block to ensure scroll works reliably with grid? or keep flex? */
-    /* flex direction column was there. */
-    /* Let's keep flex but ensure overflow works */
-    display: flex;
-    flex-direction: column;
     overflow: auto;
     /* Allow both horizontal and vertical scroll */
+    position: relative;
+}
+
+/* Custom Scrollbar for visibility */
+.sequencer-container::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+.sequencer-container::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 5px;
+}
+
+.sequencer-container::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border: 2px solid rgba(0, 0, 0, 0.2);
+    border-radius: 5px;
+}
+
+.sequencer-container::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.2);
 }
 
 .sequencer-grid {
     display: flex;
     flex-direction: column;
+    align-items: flex-start;
     gap: 30px;
-    /* Space between systems */
-    padding: 10px;
+    padding: 20px;
+    width: max-content;
+    min-width: 100%;
 }
 
 .system-container {
     display: grid;
-    /* Columns defined in JS: 170px + beats */
+    /* Columns defined in JS */
     gap: 8px;
     align-items: center;
     background: rgba(255, 255, 255, 0.02);
@@ -304,7 +322,8 @@ main {
     border-radius: 8px;
     border: 1px solid var(--glass-border);
     position: relative;
-    /* For absolute positioning of delete button */
+    width: max-content;
+    /* Ensure container expands with content */
 }
 
 .bar-del-btn {
@@ -349,15 +368,17 @@ main {
 }
 
 .step-btn {
-    width: 100%;
-    aspect-ratio: 1;
-    /* Keep square */
-    min-width: 5px;
+    width: 48px;
+    /* Fixed size based on 16th note feel */
+    height: 48px;
+    /* Fixed size based on 16th note feel */
     background: rgba(255, 255, 255, 0.05);
     border-radius: 4px;
     border: 1px solid rgba(255, 255, 255, 0.05);
     cursor: pointer;
     transition: all 0.1s;
+    flex-shrink: 0;
+    /* Prevent shrinking */
 }
 
 .step-btn.active {

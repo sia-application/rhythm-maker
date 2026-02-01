@@ -844,7 +844,7 @@ class UI {
             const systemContainer = document.createElement('div');
             systemContainer.className = 'system-container';
             // Added 30px column at the end for the + button
-            systemContainer.style.gridTemplateColumns = `170px repeat(${bar.beats.length}, minmax(100px, 1fr)) 30px`;
+            systemContainer.style.gridTemplateColumns = `170px repeat(${bar.beats.length}, auto) 30px`;
 
             // Delete Bar Button
             const barDelBtn = document.createElement('button');
@@ -1028,8 +1028,8 @@ class UI {
                     const beatCell = document.createElement('div');
                     beatCell.className = 'beat-cell';
                     beatCell.style.display = 'grid';
-                    beatCell.style.gridTemplateColumns = `repeat(${beat.subdivision}, 1fr)`;
-                    beatCell.style.gap = '2px';
+                    beatCell.style.gridTemplateColumns = `repeat(${beat.subdivision}, 48px)`;
+                    beatCell.style.gap = '4px';
 
                     for (let s = 0; s < beat.subdivision; s++) {
                         const btn = document.createElement('div');
