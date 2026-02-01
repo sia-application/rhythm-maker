@@ -855,10 +855,14 @@ class RhythmGame {
         const audioNow = this.seq.audio.ctx.currentTime;
 
         // Calculate the total animation duration to make it hit the line at travelTimeToLine
-        // Start: -20px, Line: laneHeight - 40px, End: laneHeight
+        // Start: -20px, Line: laneHeight - 40px, End: 110% (1.1 * laneHeight)
         const laneHeight = this.container.offsetHeight || 500;
-        const distToLine = (laneHeight - 40) - (-20);
-        const totalDist = laneHeight - (-20);
+        const startPos = -20;
+        const linePos = laneHeight - 40;
+        const endPos = 1.1 * laneHeight;
+
+        const distToLine = linePos - startPos;
+        const totalDist = endPos - startPos;
 
         // duration * (distToLine / totalDist) = travelTimeToLine
         // duration = travelTimeToLine * (totalDist / distToLine)
@@ -919,7 +923,8 @@ class RhythmGame {
             }
         });
 
-        if (targetNote && minDiff < 200) {
+        // Use a wider window for finding notes (e.g. 350ms)
+        if (targetNote && minDiff < 350) {
             this.judgeNote(targetNote, minDiff);
         }
 
@@ -980,6 +985,7 @@ class RhythmGame {
 
         if (note.el && diff !== Infinity) {
             note.el.style.display = 'none';
+            note.el.style.visibility = 'hidden';
             note.el.remove();
             // Clear the MISS judgment timeout since it was hit/missed early
             if (note.timeoutID) {
