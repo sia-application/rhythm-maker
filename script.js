@@ -13,7 +13,12 @@ class AudioEngine {
             'kick': { freq: 150, decay: 0.5, type: 'sine' },
             'snare': { freq: 200, decay: 0.2, type: 'noise' },
             'hihat': { freq: 800, decay: 0.1, type: 'noise' },
+            'openhihat': { freq: 800, decay: 0.4, type: 'noise' },
             'tom': { freq: 100, decay: 0.4, type: 'triangle' },
+            'clap': { freq: 0, decay: 0.3, type: 'noise' },
+            'rim': { freq: 1000, decay: 0.02, type: 'square' },
+            'cowbell': { freq: 540, decay: 0.1, type: 'cowbell' },
+            'shaker': { freq: 3000, decay: 0.1, type: 'noise' },
             'metronome': { freq: 1000, decay: 0.05, type: 'square' }
         };
     }
@@ -102,8 +107,29 @@ class AudioEngine {
                 this.playNoise(t, 0.2); // Snap
                 break;
             case 'hihat':
-                // Highpass noise
                 this.playNoise(t, 0.05);
+                break;
+            case 'openhihat':
+                this.playNoise(t, 0.4);
+                break;
+            case 'clap':
+                // Clap is 3 tiny bursts + 1 decay
+                for (let i = 0; i < 3; i++) {
+                    this.playNoise(t + (i * 0.01), 0.01);
+                }
+                this.playNoise(t + 0.03, 0.3);
+                break;
+            case 'rim':
+                this.playTone(t, 'square', 1000, 0.02);
+                break;
+            case 'cowbell':
+                // Dual square wave cowbell
+                this.playTone(t, 'square', 540, 0.1);
+                this.playTone(t, 'square', 800, 0.08);
+                break;
+            case 'shaker':
+                // High frequency burst
+                this.playNoise(t, 0.1);
                 break;
             case 'metronome':
                 this.playTone(t, 'square', 1000, 0.05);
