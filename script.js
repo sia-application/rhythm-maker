@@ -193,7 +193,7 @@ class Sequencer {
 
         this.nextNoteTime = 0;
         this.lookahead = 25.0; // ms
-        this.scheduleAheadTime = 0.1; // s
+        this.scheduleAheadTime = 1.0; // s (1000ms) for game mode lookahead
         this.timerID = null;
 
         // Initial setup
@@ -605,14 +605,27 @@ class Sequencer {
         const bar = this.bars[barIndex];
         if (!bar) return;
 
+        const now = this.audio.ctx.currentTime;
+
         bar.tracks.forEach((track, tIndex) => {
             if (track.pattern[beatIndex] && track.pattern[beatIndex][stepInBeat]) {
                 this.audio.playInstrument(track.type, time);
+
+                // Trigger Game Note
+                if (this.onNoteTrigger) {
+                    const travelTime = 0.8; // 800ms travel TO THE LINE
+                    const spawnDelay = (time - travelTime - now) * 1000;
+                    setTimeout(() => {
+                        if (this.isPlaying) {
+                            this.onNoteTrigger(barIndex, tIndex, time);
+                        }
+                    }, Math.max(0, spawnDelay));
+                }
             }
         });
 
         // Update UI
-        const drawTime = (time - this.audio.ctx.currentTime) * 1000;
+        const drawTime = (time - now) * 1000;
         setTimeout(() => {
             if (this.isPlaying) {
                 ui.highlightStep(barIndex, beatIndex, stepInBeat);
@@ -701,6 +714,206 @@ class Sequencer {
     }
 }
 
+class RhythmGame {
+    constructor(sequencer) {
+        this.seq = sequencer;
+        this.score = 0;
+        this.combo = 0;
+        this.container = document.getElementById('game-lanes');
+        this.scoreEl = document.getElementById('game-score');
+        this.comboEl = document.getElementById('game-combo');
+        this.statusEl = document.getElementById('game-status');
+        this.lanes = [];
+        this.activeNotes = []; // { el, time, lane, judged }
+        this.laneMap = {}; // trackIndex -> laneIndex
+        this.isGameMode = false;
+        this.lastNoteTime = 0;
+    }
+
+    init() {
+        this.container.innerHTML = '';
+        this.lanes = [];
+        this.activeNotes = [];
+        this.score = 0;
+        this.combo = 0;
+        console.log("RhythmGame: Initializing...", this.seq.bars);
+        this.updateUI();
+
+        // Create lanes based on tracks in the target bar
+        const bar0 = this.seq.bars[0];
+        if (!bar0) {
+            console.error("RhythmGame: No bars found");
+            return;
+        }
+
+        const tracks = bar0.tracks;
+        if (tracks.length === 0) {
+            console.warn("RhythmGame: No tracks found in Bar 0, adding default lane mapping");
+            // Placeholder lane if no tracks exist? 
+        }
+
+        bar0.tracks.forEach((track, i) => {
+            const lane = document.createElement('div');
+            lane.className = 'game-lane';
+            lane.dataset.laneIndex = i;
+
+            const flash = document.createElement('div');
+            flash.className = 'lane-hit-flash';
+            lane.appendChild(flash);
+
+            lane.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                this.handleInput(i);
+            });
+
+            this.container.appendChild(lane);
+            this.lanes.push({ el: lane, flash: flash });
+            this.laneMap[i] = i;
+        });
+
+        console.log(`RhythmGame: Created ${this.lanes.length} lanes`);
+
+        const judgmentLine = document.createElement('div');
+        judgmentLine.className = 'judgment-line';
+        this.container.appendChild(judgmentLine);
+    }
+
+    spawnNote(trackIndex, targetTime) {
+        if (!this.isGameMode) return;
+        const laneIndex = this.laneMap[trackIndex];
+        if (laneIndex === undefined) return;
+
+        const lane = this.lanes[laneIndex];
+        const note = document.createElement('div');
+        note.className = 'game-note';
+        lane.el.appendChild(note);
+
+        const travelTimeToLine = 800; // ms
+        const now = performance.now();
+        const audioNow = this.seq.audio.ctx.currentTime;
+
+        // Calculate the total animation duration to make it hit the line at travelTimeToLine
+        // Start: -20px, Line: laneHeight - 40px, End: laneHeight
+        const laneHeight = this.container.offsetHeight || 500;
+        const distToLine = (laneHeight - 40) - (-20);
+        const totalDist = laneHeight - (-20);
+
+        // duration * (distToLine / totalDist) = travelTimeToLine
+        // duration = travelTimeToLine * (totalDist / distToLine)
+        const animationDuration = travelTimeToLine * (totalDist / distToLine);
+
+        // Exact time it should hit judgment line (relative to performance.now)
+        const perfTargetTime = now + (targetTime - audioNow) * 1000;
+
+        note.style.animation = `note-fall ${animationDuration}ms linear forwards`;
+
+        const noteObj = {
+            el: note,
+            targetTime: perfTargetTime,
+            lane: laneIndex,
+            judged: false
+        };
+
+        this.activeNotes.push(noteObj);
+
+        setTimeout(() => {
+            if (!noteObj.judged) {
+                this.judgeNote(noteObj, Infinity);
+            }
+            if (note.parentNode) {
+                note.remove();
+            }
+            const idx = this.activeNotes.indexOf(noteObj);
+            if (idx > -1) this.activeNotes.splice(idx, 1);
+        }, travelTimeTotal + 100);
+    }
+
+    handleInput(laneIndex = -1) {
+        if (!this.isGameMode) return;
+
+        const now = performance.now();
+        let targetNote = null;
+        let minDiff = Infinity;
+
+        this.activeNotes.forEach(note => {
+            if (note.judged) return;
+            if (laneIndex !== -1 && note.lane !== laneIndex) return;
+
+            const diff = Math.abs(now - note.targetTime);
+            if (diff < minDiff) {
+                minDiff = diff;
+                targetNote = note;
+            }
+        });
+
+        if (targetNote && minDiff < 200) {
+            this.judgeNote(targetNote, minDiff);
+        }
+
+        if (laneIndex !== -1) {
+            const flash = this.lanes[laneIndex].flash;
+            flash.classList.add('active');
+            setTimeout(() => flash.classList.remove('active'), 100);
+        } else {
+            this.lanes.forEach(l => {
+                l.flash.classList.add('active');
+                setTimeout(() => l.flash.classList.remove('active'), 100);
+            });
+        }
+    }
+
+    judgeNote(note, diff) {
+        note.judged = true;
+        let rating = 'MISS';
+        let scoreAdd = 0;
+        let ratingClass = 'note-miss';
+
+        if (diff <= 50) {
+            rating = 'PERFECT';
+            scoreAdd = 100;
+            ratingClass = 'note-perfect';
+            this.combo++;
+        } else if (diff <= 100) {
+            rating = 'GREAT';
+            scoreAdd = 50;
+            ratingClass = 'note-great';
+            this.combo++;
+        } else if (diff <= 150) {
+            rating = 'OK';
+            scoreAdd = 20;
+            ratingClass = 'note-ok';
+            this.combo++;
+        } else {
+            rating = 'MISS';
+            this.combo = 0;
+            ratingClass = 'note-miss';
+        }
+
+        this.score += scoreAdd;
+        this.showJudgment(rating, ratingClass);
+        this.updateUI();
+
+        if (rating !== 'MISS') {
+            note.el.style.opacity = '0';
+        }
+    }
+
+    showJudgment(text, className) {
+        const el = document.createElement('div');
+        el.className = `judgment-float ${className}`;
+        el.innerText = text;
+        this.container.appendChild(el);
+        setTimeout(() => el.remove(), 500);
+        this.statusEl.innerText = text;
+        this.statusEl.className = `game-status ${className}`;
+    }
+
+    updateUI() {
+        this.scoreEl.innerText = this.score;
+        this.comboEl.innerText = this.combo;
+    }
+}
+
 class UI {
     constructor(sequencer) {
         this.seq = sequencer;
@@ -731,11 +944,18 @@ class UI {
         this.ctxSelGlobalStepBtn = document.getElementById('ctx-sel-global');
         this.ctxUnselGlobalStepBtn = document.getElementById('ctx-unsel-global');
 
+        this.viewToggleBtn = document.getElementById('view-toggle-btn');
+        this.sequencerView = document.getElementById('sequencer-view');
+        this.gameView = document.getElementById('game-view');
+        this.game = new RhythmGame(this.seq);
+        this.isGameMode = false;
+
         this.ctxTarget = { bar: -1, beat: -1, step: -1 };
 
         this.setupListeners();
         this.setupContextMenu();
         this.renderGrid();
+        console.log("UI: Initialized successfully");
     }
 
     setupListeners() {
@@ -816,6 +1036,33 @@ class UI {
                 }
             });
             this.renderGrid();
+        });
+
+        // View Toggle
+        this.viewToggleBtn.addEventListener('click', () => {
+            console.log("UI: View Toggle Clicked. Current isGameMode:", this.isGameMode);
+            this.isGameMode = !this.isGameMode;
+            this.viewToggleBtn.innerText = this.isGameMode ? "Sequencer Mode" : "Game Mode";
+            this.sequencerView.classList.toggle('hidden', this.isGameMode);
+            this.gameView.classList.toggle('hidden', !this.isGameMode);
+            this.game.isGameMode = this.isGameMode;
+
+            if (this.isGameMode) {
+                console.log("UI: Switching to Game Mode");
+                this.game.init();
+                this.seq.onNoteTrigger = (bar, track, targetTime) => this.game.spawnNote(track, targetTime);
+            } else {
+                console.log("UI: Switching to Sequencer Mode");
+                this.seq.onNoteTrigger = null;
+            }
+        });
+
+        // Global Key Input for Game
+        window.addEventListener('keydown', (e) => {
+            if (this.isGameMode && e.code === 'Space') {
+                e.preventDefault();
+                this.game.handleInput();
+            }
         });
 
     }

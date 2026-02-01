@@ -19,7 +19,7 @@
         <header class="app-header">
             <h1>RHYTHM MAKER</h1>
             <div class="header-controls">
-                <!-- Game Mode button removed -->
+                <button id="view-toggle-btn" class="btn-secondary">Game Mode</button>
             </div>
         </header>
 
@@ -89,7 +89,19 @@
                 </div>
             </div>
 
-            <!-- Game View removed -->
+            <div id="game-view" class="hidden glass-panel">
+                <div class="game-header">
+                    <div class="score-container">SCORE: <span id="game-score">0</span></div>
+                    <div class="combo-container"><span id="game-combo">0</span> COMBO</div>
+                    <div id="game-status" class="game-status">READY</div>
+                </div>
+                <div id="game-lanes" class="game-lanes">
+                    <!-- Lanes will be generated in JS -->
+                </div>
+                <div class="game-footer">
+                    <p class="game-hint">PRESS SPACE OR TAP LANES TO PLAY</p>
+                </div>
+            </div>
         </main>
     </div>
 
