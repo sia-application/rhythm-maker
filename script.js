@@ -1059,6 +1059,22 @@ class UI {
                 });
             });
 
+            // 3. Footer row: Subdivision Values
+            const valLabel = document.createElement('div');
+            valLabel.className = 'grid-row-label';
+            valLabel.style.color = 'var(--text-muted)';
+            valLabel.style.fontSize = '0.75rem';
+            valLabel.style.paddingLeft = '5px';
+            valLabel.innerText = 'Step Value';
+            systemContainer.appendChild(valLabel);
+
+            bar.beats.forEach((beat) => {
+                const valCell = document.createElement('div');
+                valCell.className = 'beat-value-display';
+                valCell.innerText = (1 / beat.subdivision).toFixed(2);
+                systemContainer.appendChild(valCell);
+            });
+
             // 3. Add Track Button INSIDE the Bar (Last Row of Grid or separate?)
             // We can append it to the label column of a new row, or just append a div to the container?
             // If we append to container, it becomes a grid item.
