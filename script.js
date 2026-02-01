@@ -775,6 +775,7 @@ class Sequencer {
                 // Determine countdown duration (4 beats: 3, 2, 1, GO -> Music starts @ 5th beat)
                 const countdownDuration = (60 / this.bpm) * 4;
                 const startTime = this.audio.ctx.currentTime + 0.1; // 100ms buffer
+                ui.game.resetStats();
                 this.startPlayback(countdownDuration, startTime);
                 ui.startCountdown(this.bpm, startTime);
             } else {
