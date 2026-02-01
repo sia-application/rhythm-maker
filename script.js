@@ -625,11 +625,13 @@ class Sequencer {
                 if (this.onNoteTrigger) {
                     const travelTime = 2.0 / this.noteSpeed; // travel time to the line in SECONDS
                     const spawnDelay = (time - travelTime - now) * 1000;
+                    // We call it for all notes in lookahead.
+                    // spawnNote will handle negative delay for notes that should have started.
                     setTimeout(() => {
                         if (this.isPlaying) {
                             this.onNoteTrigger(barIndex, tIndex, time);
                         }
-                    }, Math.max(0, spawnDelay));
+                    }, spawnDelay);
                 }
             }
         });
@@ -759,7 +761,7 @@ class RhythmGame {
         const tracks = bar0.tracks;
         if (tracks.length === 0) {
             console.warn("RhythmGame: No tracks found in Bar 0, adding default lane mapping");
-            // Placeholder lane if no tracks exist? 
+            // Placeholder lane if no tracks exist?
         }
 
         bar0.tracks.forEach((track, i) => {
@@ -815,7 +817,13 @@ class RhythmGame {
         // Exact time it should hit judgment line (relative to performance.now)
         const perfTargetTime = now + (targetTime - audioNow) * 1000;
 
+        // Calculate delay: if negative, we need to skip some animation
+        const spawnDelayMs = perfTargetTime - travelTimeToLine - now;
+
         note.style.animation = `note-fall ${animationDuration}ms linear forwards`;
+        if (spawnDelayMs < 0) {
+            note.style.animationDelay = `${spawnDelayMs}ms`;
+        }
 
         const noteObj = {
             el: note,
@@ -835,7 +843,7 @@ class RhythmGame {
             }
             const idx = this.activeNotes.indexOf(noteObj);
             if (idx > -1) this.activeNotes.splice(idx, 1);
-        }, travelTimeTotal + 100);
+        }, animationDuration + 100);
     }
 
     handleInput(laneIndex = -1) {
