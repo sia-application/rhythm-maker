@@ -34,7 +34,8 @@ class AudioEngine {
         const AudioContext = window.AudioContext || window.webkitAudioContext;
         this.ctx = new AudioContext();
         this.masterGain = this.ctx.createGain();
-        this.masterGain.gain.value = 0.5;
+        const volEl = document.getElementById('master-vol');
+        this.masterGain.gain.value = volEl ? parseFloat(volEl.value) : 0.5;
         this.masterGain.connect(this.ctx.destination);
         this.isInitialized = true;
         console.log("AudioEngine initialized");
@@ -45,7 +46,7 @@ class AudioEngine {
         }
     }
 
-    playTone(time, type, freq, decay) {
+    playTone(time, type, freq, decay, volume = 1.0) {
         if (!this.ctx) return;
         const osc = this.ctx.createOscillator();
         const gain = this.ctx.createGain();
@@ -67,7 +68,7 @@ class AudioEngine {
         osc.stop(time + decay);
     }
 
-    playNoise(time, decay) {
+    playNoise(time, decay, volume = 1.0) {
         if (!this.ctx) return;
         const bufferSize = this.ctx.sampleRate * decay;
         const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
@@ -86,7 +87,7 @@ class AudioEngine {
         filter.frequency.value = 1000;
 
         const gain = this.ctx.createGain();
-        gain.gain.setValueAtTime(1, time);
+        gain.gain.setValueAtTime(volume, time);
         gain.gain.exponentialRampToValueAtTime(0.001, time + decay);
 
         noise.connect(filter);
@@ -96,68 +97,72 @@ class AudioEngine {
         noise.start(time);
     }
 
-    playInstrument(name, time = 0) {
+    playInstrument(name, time = 0, trackVolume = 1.0) {
         if (!this.isInitialized) return;
         // Fallback to now if time is 0 (immediate play)
         const t = time || this.ctx.currentTime;
 
+        // Apply track volume if needed. 
+        // We create a temporary gain node for the instrument play if we want to be precise,
+        // but for simple synthesis, we can pass it down to playTone/playNoise.
+
+        const v = trackVolume;
+
         switch (name) {
             case 'kick':
-                this.playTone(t, 'sine', 150, 0.5);
+                this.playTone(t, 'sine', 150, 0.5, v);
                 break;
             case 'bassdrum':
-                this.playTone(t, 'sine', 60, 0.8);
+                this.playTone(t, 'sine', 60, 0.8, v);
                 break;
             case 'tomH':
-                this.playTone(t, 'triangle', 200, 0.3);
+                this.playTone(t, 'triangle', 200, 0.3, v);
                 break;
             case 'tomM':
-                this.playTone(t, 'triangle', 140, 0.4);
+                this.playTone(t, 'triangle', 140, 0.4, v);
                 break;
             case 'tomL':
-                this.playTone(t, 'triangle', 90, 0.5);
+                this.playTone(t, 'triangle', 90, 0.5, v);
                 break;
             case 'snare':
-                this.playTone(t, 'triangle', 200, 0.1); // Body
-                this.playNoise(t, 0.2); // Snap
+                this.playTone(t, 'triangle', 200, 0.1, v); // Body
+                this.playNoise(t, 0.2, v); // Snap
                 break;
             case 'hihat':
-                this.playNoise(t, 0.05);
+                this.playNoise(t, 0.05, v);
                 break;
             case 'openhihat':
-                this.playNoise(t, 0.4);
+                this.playNoise(t, 0.4, v);
                 break;
             case 'pedalhat':
-                this.playNoise(t, 0.08); // Slightly longer than closed hihat
+                this.playNoise(t, 0.08, v);
                 break;
             case 'crash':
-                this.playNoise(t, 1.5); // Long noise decay
+                this.playNoise(t, 1.5, v);
                 break;
             case 'ride':
-                this.playTone(t, 'square', 400, 0.1); // Ping body
-                this.playNoise(t, 0.8); // Resonance
+                this.playTone(t, 'square', 400, 0.1, v);
+                this.playNoise(t, 0.8, v);
                 break;
             case 'clap':
                 // Clap is 3 tiny bursts + 1 decay
                 for (let i = 0; i < 3; i++) {
-                    this.playNoise(t + (i * 0.01), 0.01);
+                    this.playNoise(t + (i * 0.01), 0.01, v);
                 }
-                this.playNoise(t + 0.03, 0.3);
+                this.playNoise(t + 0.03, 0.3, v);
                 break;
             case 'rim':
-                this.playTone(t, 'square', 1000, 0.02);
+                this.playTone(t, 'square', 1000, 0.02, v);
                 break;
             case 'cowbell':
-                // Dual square wave cowbell
-                this.playTone(t, 'square', 540, 0.1);
-                this.playTone(t, 'square', 800, 0.08);
+                this.playTone(t, 'square', 540, 0.1, v);
+                this.playTone(t, 'square', 800, 0.08, v);
                 break;
             case 'shaker':
-                // High frequency burst
-                this.playNoise(t, 0.1);
+                this.playNoise(t, 0.1, v);
                 break;
             case 'metronome':
-                this.playTone(t, 'square', 1000, 0.05);
+                this.playTone(t, 'square', 1000, 0.05, v);
                 break;
         }
     }
@@ -214,6 +219,7 @@ class Sequencer {
         defaultTracks.forEach(type => {
             const track = {
                 type: type,
+                volume: 1.0,
                 pattern: []
             };
             // Init pattern for each beat
@@ -246,6 +252,7 @@ class Sequencer {
         const track = {
             id: this.nextTrackId++,
             type: useType,
+            volume: 1.0,
             pattern: []
         };
 
@@ -560,6 +567,7 @@ class UI {
         this.timeSigSelect = document.getElementById('time-sig-select');
         this.subdivSelect = document.getElementById('subdiv-select');
         this.playBtn = document.getElementById('play-btn');
+        this.masterVol = document.getElementById('master-vol');
         this.ctxMenu = document.getElementById('context-menu');
         this.ctxAddBtn = document.getElementById('ctx-add-step');
         this.ctxAddBarBtn = document.getElementById('ctx-add-step-bar');
@@ -602,6 +610,13 @@ class UI {
         };
 
         this.timeSigSelect.addEventListener('change', updateParams);
+        if (this.masterVol) {
+            this.masterVol.addEventListener('input', (e) => {
+                if (this.seq.audio.isInitialized) {
+                    this.seq.audio.masterGain.gain.setTargetAtTime(parseFloat(e.target.value), this.seq.audio.ctx.currentTime, 0.05);
+                }
+            });
+        }
 
         // "Set All" subdivision
         this.subdivSelect.addEventListener('change', (e) => {
