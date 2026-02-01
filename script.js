@@ -774,22 +774,23 @@ class Sequencer {
             if (typeof ui !== 'undefined' && ui.isGameMode) {
                 // Determine countdown duration (4 beats: 3, 2, 1, GO -> Music starts @ 5th beat)
                 const countdownDuration = (60 / this.bpm) * 4;
-                const now = this.audio.ctx.currentTime;
-                this.startPlayback(countdownDuration);
-                ui.startCountdown(this.bpm, now);
+                const startTime = this.audio.ctx.currentTime + 0.1; // 100ms buffer
+                this.startPlayback(countdownDuration, startTime);
+                ui.startCountdown(this.bpm, startTime);
             } else {
                 this.startPlayback(0);
             }
         }
     }
 
-    startPlayback(delay = 0) {
+    startPlayback(delay = 0, baseTime = null) {
         if (this.isPlaying) return; // Guard
         this.isPlaying = true;
         const now = this.audio.ctx.currentTime;
-        // If delay is 0 (direct play), we add a tiny 0.1s buffer to ensure we don't skip the very first note.
-        // If delay > 0 (countdown), we use the exact future beat to ensure perfect sync.
-        const startTime = delay > 0 ? (now + delay) : (now + 0.1);
+        const refTime = baseTime !== null ? baseTime : now;
+
+        // If delay is 0 (direct play) and no baseTime, add a tiny 0.1s buffer
+        const startTime = (delay === 0 && baseTime === null) ? (now + 0.1) : (refTime + delay);
 
         // Re-activate master gain if it was ramped down
         this.audio.masterGain.gain.cancelScheduledValues(now);
@@ -1239,14 +1240,7 @@ class UI {
 
         const startTime = baseTime !== null ? baseTime : this.seq.audio.ctx.currentTime;
         const labels = ["3", "2", "1", "GO!"];
-
-        // Instant first trigger to avoid 1-frame jitter
-        this.countdownNumber.innerText = labels[0];
-        this.countdownNumber.classList.remove('countdown-pulse');
-        void this.countdownNumber.offsetHeight; // force reflow
-        this.countdownNumber.classList.add('countdown-pulse');
-
-        let lastBeatIndex = 0;
+        let lastBeatIndex = -1;
 
         // Schedule countdown audio blips precisely
         for (let i = 0; i < 4; i++) {
