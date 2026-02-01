@@ -193,12 +193,22 @@ class Sequencer {
 
         this.nextNoteTime = 0;
         this.lookahead = 25.0; // ms
-        this.scheduleAheadTime = 1.0; // s (1000ms) for game mode lookahead
+        this.noteSpeed = 1.0; // Default speed
+        this.updateScheduleAheadTime();
         this.timerID = null;
 
         // Initial setup
         this.lastSelectedInstrument = 'metronome';
         this.addBar(); // Adds first bar
+    }
+
+    updateScheduleAheadTime() {
+        // High speed = Low travel time.
+        // Low speed = High travel time.
+        // Travel time (s) = 2.0 / speed. 
+        // We need scheduleAheadTime to be at least (travelTime + buffer).
+        const travelTimeSeconds = 2.0 / this.noteSpeed;
+        this.scheduleAheadTime = travelTimeSeconds + 0.3; // 300ms buffer
     }
 
     addBar() {
@@ -613,7 +623,7 @@ class Sequencer {
 
                 // Trigger Game Note
                 if (this.onNoteTrigger) {
-                    const travelTime = 0.8; // 800ms travel TO THE LINE
+                    const travelTime = 2.0 / this.noteSpeed; // travel time to the line in SECONDS
                     const spawnDelay = (time - travelTime - now) * 1000;
                     setTimeout(() => {
                         if (this.isPlaying) {
@@ -788,7 +798,7 @@ class RhythmGame {
         note.className = 'game-note';
         lane.el.appendChild(note);
 
-        const travelTimeToLine = 800; // ms
+        const travelTimeToLine = (2.0 / this.seq.noteSpeed) * 1000; // ms
         const now = performance.now();
         const audioNow = this.seq.audio.ctx.currentTime;
 
@@ -947,6 +957,8 @@ class UI {
         this.viewToggleBtn = document.getElementById('view-toggle-btn');
         this.sequencerView = document.getElementById('sequencer-view');
         this.gameView = document.getElementById('game-view');
+        this.gameSpeedSlider = document.getElementById('game-speed-slider');
+        this.gameSpeedVal = document.getElementById('game-speed-val');
         this.game = new RhythmGame(this.seq);
         this.isGameMode = false;
 
@@ -1064,6 +1076,16 @@ class UI {
                 this.game.handleInput();
             }
         });
+
+        // Speed Slider
+        if (this.gameSpeedSlider) {
+            this.gameSpeedSlider.addEventListener('input', (e) => {
+                const val = parseFloat(e.target.value);
+                this.seq.noteSpeed = val;
+                this.seq.updateScheduleAheadTime();
+                if (this.gameSpeedVal) this.gameSpeedVal.innerText = val.toFixed(1);
+            });
+        }
 
     }
 
