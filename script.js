@@ -589,7 +589,7 @@ class UI {
                     stepIndex = parseInt(btn.dataset.step);
 
                     this.ctxDelBtn.classList.remove('disabled');
-                    this.ctxDelBtn.innerText = `Delete Step ${stepIndex + 1}`;
+                    this.ctxDelBtn.innerText = `ステップ${stepIndex + 1}を削除`;
                 } else if (beatCell) {
                     // Try to find first button to get metadata
                     const firstBtn = beatCell.querySelector('.step-btn');

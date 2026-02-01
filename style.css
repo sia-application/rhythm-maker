@@ -497,12 +497,7 @@ main {
     transform: translateY(-1px);
 }
 
-/* Metronome Color */
-.step-btn.metronome.active {
-    background-color: #ffe100;
-    box-shadow: 0 0 15px #ffe100;
-    border-color: #ffe100;
-}
+
 
 /* Context Menu */
 #context-menu {
