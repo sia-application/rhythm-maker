@@ -394,9 +394,11 @@ class Sequencer {
     removeStep(barIndex, beatIndex, stepIndex) {
         if (!this.bars[barIndex]) return;
         const bar = this.bars[barIndex];
-
         const currentSubdiv = bar.beats[beatIndex].subdivision;
+
         if (currentSubdiv <= 1) return;
+        // If step does not exist at this index, return
+        if (stepIndex === -1 || stepIndex >= currentSubdiv) return;
 
         bar.beats[beatIndex].subdivision = currentSubdiv - 1;
 
@@ -412,7 +414,14 @@ class Sequencer {
         const bar = this.bars[barIndex];
         if (beatIndex < 0 || beatIndex >= bar.beats.length) return;
 
-        bar.beats[beatIndex].subdivision += 1;
+        const currentSubdiv = bar.beats[beatIndex].subdivision;
+        // If stepIndex is not -1 and out of bounds, do not add (User request)
+        if (stepIndex !== -1 && stepIndex >= currentSubdiv) {
+            console.log(`  > Skip: Step index ${stepIndex} out of bounds for sub ${currentSubdiv}`);
+            return;
+        }
+
+        bar.beats[beatIndex].subdivision = currentSubdiv + 1;
 
         bar.tracks.forEach((track, tIdx) => {
             if (track.pattern[beatIndex]) {
@@ -439,9 +448,8 @@ class Sequencer {
         const bar = this.bars[barIndex];
         if (!bar) return;
         bar.beats.forEach((beat, bIndex) => {
-            // When inserting for the whole bar, we match the relative position if possible
-            const targetIndex = (stepIndex === -1) ? -1 : Math.min(stepIndex, beat.subdivision - 1);
-            this.insertStep(barIndex, bIndex, targetIndex);
+            // No longer capping with Math.min to ensure we respect step existence
+            this.insertStep(barIndex, bIndex, stepIndex);
         });
     }
 
@@ -449,8 +457,7 @@ class Sequencer {
         console.log(`[Sequencer] insertStepGlobal: Step ${stepIndex}`);
         this.bars.forEach((bar, barIndex) => {
             bar.beats.forEach((beat, bIndex) => {
-                const targetIndex = (stepIndex === -1) ? -1 : Math.min(stepIndex, beat.subdivision - 1);
-                this.insertStep(barIndex, bIndex, targetIndex);
+                this.insertStep(barIndex, bIndex, stepIndex);
             });
         });
     }
@@ -470,11 +477,7 @@ class Sequencer {
         const bar = this.bars[barIndex];
         if (!bar) return;
         bar.beats.forEach((beat, bIndex) => {
-            // Match the index if possible, otherwise skip or cap
-            const targetIndex = (stepIndex === -1) ? -1 : Math.min(stepIndex, beat.subdivision - 1);
-            if (targetIndex !== -1) {
-                this.removeStep(barIndex, bIndex, targetIndex);
-            }
+            this.removeStep(barIndex, bIndex, stepIndex);
         });
     }
 
@@ -482,10 +485,7 @@ class Sequencer {
         console.log(`[Sequencer] removeStepGlobal: Step ${stepIndex}`);
         this.bars.forEach((bar, barIndex) => {
             bar.beats.forEach((beat, bIndex) => {
-                const targetIndex = (stepIndex === -1) ? -1 : Math.min(stepIndex, beat.subdivision - 1);
-                if (targetIndex !== -1) {
-                    this.removeStep(barIndex, bIndex, targetIndex);
-                }
+                this.removeStep(barIndex, bIndex, stepIndex);
             });
         });
     }
@@ -790,7 +790,7 @@ class UI {
                     this.ctxDelBtn.classList.remove('disabled');
                     this.ctxDelBtn.innerText = `Bar${barIndex + 1}: ステップ${stepIndex + 1}を削除`;
                     this.ctxAddBtn.innerText = `ステップ${stepIndex + 1}の右隣にステップを追加`;
-                    this.ctxAddBarBtn.innerText = `Bar${barIndex + 1}全体にステップを右隣に追加`;
+                    this.ctxAddBarBtn.innerText = `Bar${barIndex + 1}全体のステップ${stepIndex + 1}の右隣にステップを追加`;
                     this.ctxDelBarBtn.innerText = `Bar${barIndex + 1}の指定位置ステップを全て削除`;
                     this.ctxDelGlobalBtn.innerText = `全てのSTEP${stepIndex + 1}を削除`;
                     this.ctxAddGlobalBtn.innerText = `全てのSTEP${stepIndex + 1}の右隣にステップを追加`;
@@ -811,7 +811,7 @@ class UI {
                     this.ctxDelBtn.classList.add('disabled');
                     this.ctxDelBtn.innerText = "選択箇所を削除";
                     this.ctxAddBtn.innerText = "ステップの右隣に追加";
-                    this.ctxAddBarBtn.innerText = `Bar${barIndex + 1}全体にステップを末尾に追加`;
+                    this.ctxAddBarBtn.innerText = `Bar${barIndex + 1}全体のステップの右隣にステップを追加`;
                     this.ctxDelBarBtn.innerText = `Bar${barIndex + 1}の指定位置を削除`;
                     this.ctxDelGlobalBtn.innerText = "全ての拍の同位置を削除";
                     this.ctxAddGlobalBtn.innerText = "全ての拍の末尾にステップを追加";
