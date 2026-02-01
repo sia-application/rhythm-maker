@@ -54,12 +54,12 @@ class AudioEngine {
 
         osc.type = type;
         osc.frequency.setValueAtTime(freq, time);
-        // Pitch drop for kick
         if (type === 'sine') {
             osc.frequency.exponentialRampToValueAtTime(0.01, time + decay);
         }
 
-        gain.gain.setValueAtTime(1, time);
+        gain.gain.setValueAtTime(0.001, time);
+        gain.gain.exponentialRampToValueAtTime(volume, time + 0.002); // Quick fade-in to avoid snap
         gain.gain.exponentialRampToValueAtTime(0.001, time + decay);
 
         osc.connect(gain);
@@ -76,23 +76,23 @@ class AudioEngine {
     playNoise(time, decay, volume = 1.0) {
         if (!this.ctx) return;
         const bufferSize = this.ctx.sampleRate * decay;
-        const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+        const buffer = this.ctx.createBuffer(1, Math.max(1, bufferSize), this.ctx.sampleRate);
         const data = buffer.getChannelData(0);
 
-        for (let i = 0; i < bufferSize; i++) {
+        for (let i = 0; i < buffer.length; i++) {
             data[i] = Math.random() * 2 - 1;
         }
 
         const noise = this.ctx.createBufferSource();
         noise.buffer = buffer;
 
-        // Filter for hihat/snare distinction would go here (Highpass/Bandpass)
         const filter = this.ctx.createBiquadFilter();
         filter.type = 'highpass';
         filter.frequency.value = 1000;
 
         const gain = this.ctx.createGain();
-        gain.gain.setValueAtTime(volume, time);
+        gain.gain.setValueAtTime(0.001, time);
+        gain.gain.exponentialRampToValueAtTime(volume, time + 0.002);
         gain.gain.exponentialRampToValueAtTime(0.001, time + decay);
 
         noise.connect(filter);
@@ -104,31 +104,30 @@ class AudioEngine {
         noise.onended = () => this.activeNodes.delete(nodeEntry);
 
         noise.start(time);
-        noise.stop(time + decay); // Explicit stop
+        noise.stop(time + decay);
     }
 
     stopAll() {
         if (!this.ctx) return;
-        const fadeOutTime = 0.05; // 50ms fade out to prevent clicks
         const now = this.ctx.currentTime;
-        this.activeNodes.forEach(node => {
+
+        // Copy to array to safely iterate during deletion
+        const nodes = Array.from(this.activeNodes);
+        nodes.forEach(node => {
             try {
-                // Ramp down the gain of the specific node
                 node.gain.gain.cancelScheduledValues(now);
                 node.gain.gain.setValueAtTime(node.gain.gain.value, now);
-                node.gain.gain.exponentialRampToValueAtTime(0.001, now + fadeOutTime);
-                node.source.stop(now + fadeOutTime);
-            } catch (e) {
-                // Ignore if node already stopped
-            }
+                // 5ms fast but smooth fade using setTargetAtTime
+                node.gain.gain.setTargetAtTime(0, now, 0.0015);
+                node.source.stop(now + 0.01);
+            } catch (e) { }
         });
         this.activeNodes.clear();
 
-        // Also ramp down master gain briefly to handle any other lingering sounds
         if (this.masterGain) {
             this.masterGain.gain.cancelScheduledValues(now);
             this.masterGain.gain.setValueAtTime(this.masterGain.gain.value, now);
-            this.masterGain.gain.exponentialRampToValueAtTime(0.001, now + fadeOutTime);
+            this.masterGain.gain.setTargetAtTime(0, now, 0.0015);
         }
     }
 
@@ -281,13 +280,12 @@ class Sequencer {
     }
 
     removeBar(barIndex) {
-        // if (this.bars.length <= 1) return; // Allow deleting all bars
         if (barIndex < 0 || barIndex >= this.bars.length) return;
         this.bars.splice(barIndex, 1);
 
         // Adjust current Bar index if needed
         if (this.currentBarIndex >= this.bars.length) {
-            this.currentBarIndex = this.bars.length - 1;
+            this.currentBarIndex = Math.max(0, this.bars.length - 1);
         }
     }
 
@@ -619,11 +617,13 @@ class Sequencer {
     nextNote() {
         const secondsPerBeat = 60.0 / this.bpm;
         const currentBar = this.bars[this.currentBarIndex];
-        if (!currentBar) {
-            // Should not happen, but loop back safely
+
+        // Fail-safe: if bar or beat doesn't exist, reset and advance time to avoid infinite loop
+        if (!currentBar || !currentBar.beats[this.currentBeatIndex]) {
             this.currentBarIndex = 0;
             this.currentBeatIndex = 0;
             this.currentStepInBeat = 0;
+            this.nextNoteTime += secondsPerBeat; // Advance by 1 beat
             return;
         }
 
@@ -651,6 +651,20 @@ class Sequencer {
                 }
             }
         }
+
+        // --- ADAPTIVE INDEX GUARD ---
+        // Ensure indices are strictly within bounds of the target bar
+        const targetBar = this.bars[this.currentBarIndex];
+        if (targetBar) {
+            if (this.currentBeatIndex >= targetBar.beats.length) {
+                this.currentBeatIndex = 0;
+                this.currentStepInBeat = 0;
+            }
+            const targetBeat = targetBar.beats[this.currentBeatIndex];
+            if (targetBeat && this.currentStepInBeat >= targetBeat.subdivision) {
+                this.currentStepInBeat = 0;
+            }
+        }
     }
 
     scheduleNote(barIndex, beatIndex, stepInBeat, time) {
@@ -661,9 +675,18 @@ class Sequencer {
 
         bar.tracks.forEach((track, tIndex) => {
             if (track.pattern[beatIndex] && track.pattern[beatIndex][stepInBeat]) {
-                this.audio.playInstrument(track.type, time);
+                // DEFERRED SCHEDULING: 
+                // Don't create AudioNodes until 150ms before playback.
+                // This keeps the AudioContext resource light and prevents memory noise.
+                const audioDelay = (time - 0.15 - now) * 1000;
+                const aid = setTimeout(() => {
+                    if (this.isPlaying) {
+                        this.audio.playInstrument(track.type, time);
+                    }
+                }, Math.max(0, audioDelay));
+                this.scheduledTimeouts.push(aid);
 
-                // Trigger Game Note
+                // Trigger Game Note (Lead-time unchanged so visuals work)
                 if (this.onNoteTrigger) {
                     const travelTime = 2.0 / this.noteSpeed;
                     const spawnDelay = (time - travelTime - now) * 1000;
@@ -712,6 +735,9 @@ class Sequencer {
             this.clearScheduledTimeouts();
             this.audio.stopAll();
             ui.clearHighlights();
+            if (ui.game) {
+                ui.game.clearActiveNotes();
+            }
             ui.updatePlayButton(false);
         } else {
             // PLAY (or RESUME)
@@ -721,11 +747,28 @@ class Sequencer {
             this.audio.masterGain.gain.cancelScheduledValues(now);
             const targetVol = parseFloat(ui.masterVol.value);
             this.audio.masterGain.gain.setValueAtTime(0.001, now);
-            this.audio.masterGain.gain.exponentialRampToValueAtTime(targetVol, now + 0.05);
+            this.audio.masterGain.gain.exponentialRampToValueAtTime(targetVol, now + 0.01);
 
             this.nextNoteTime = now + 0.1;
-            // Ensure we start from valid indices
-            if (this.currentBarIndex >= this.bars.length) this.currentBarIndex = 0;
+
+            // --- RESUME INDEX GUARD ---
+            // Handles both -1 (from removeBar) and out of bounds
+            if (this.currentBarIndex < 0 || this.currentBarIndex >= this.bars.length) {
+                this.currentBarIndex = 0;
+                this.currentBeatIndex = 0;
+                this.currentStepInBeat = 0;
+            } else {
+                const bar = this.bars[this.currentBarIndex];
+                if (this.currentBeatIndex >= bar.beats.length) {
+                    this.currentBeatIndex = 0;
+                    this.currentStepInBeat = 0;
+                } else {
+                    const beat = bar.beats[this.currentBeatIndex];
+                    if (this.currentStepInBeat >= beat.subdivision) {
+                        this.currentStepInBeat = 0;
+                    }
+                }
+            }
 
             this.scheduler();
             ui.updatePlayButton(true);
@@ -1046,7 +1089,7 @@ class RhythmGame {
         const floats = this.container.querySelectorAll('.judgment-float');
         floats.forEach(el => el.remove());
         if (this.statusEl) {
-            this.statusEl.innerText = 'READY';
+            this.statusEl.innerText = '';
             this.statusEl.className = 'game-status';
         }
     }
