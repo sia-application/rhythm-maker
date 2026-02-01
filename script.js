@@ -10,6 +10,7 @@ class AudioEngine {
         this.isInitialized = false;
         // Instruments
         this.instruments = {
+            'metronome': { freq: 1000, decay: 0.05, type: 'square' },
             'kick': { freq: 150, decay: 0.5, type: 'sine' },
             'bassdrum': { freq: 60, decay: 0.8, type: 'sine' },
             'snare': { freq: 200, decay: 0.2, type: 'noise' },
@@ -24,8 +25,7 @@ class AudioEngine {
             'clap': { freq: 0, decay: 0.3, type: 'noise' },
             'rim': { freq: 1000, decay: 0.02, type: 'square' },
             'cowbell': { freq: 540, decay: 0.1, type: 'cowbell' },
-            'shaker': { freq: 3000, decay: 0.1, type: 'noise' },
-            'metronome': { freq: 1000, decay: 0.05, type: 'square' }
+            'shaker': { freq: 3000, decay: 0.1, type: 'noise' }
         };
     }
 
@@ -623,7 +623,7 @@ class UI {
                 sliderVal = v;
                 numberVal = Math.round(v * 100);
             } else {
-                numberVal = Math.max(0, Math.min(100, Math.round(v)));
+                numberVal = Math.max(0, Math.min(500, Math.round(v)));
                 sliderVal = numberVal / 100;
             }
 
