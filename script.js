@@ -228,7 +228,7 @@ class Sequencer {
         this.nextNoteTime = 0;
         this.lookahead = 25.0; // ms
         this.noteSpeed = 1.0; // Default speed
-        this.playbackMode = 'loop'; // 'loop' or 'stop'
+        this.playbackMode = 'stop'; // 'loop' or 'stop'
         this.updateScheduleAheadTime();
         this.timerID = null;
         this.scheduledTimeouts = []; // Track UI and note timeouts
