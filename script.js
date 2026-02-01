@@ -406,6 +406,55 @@ class Sequencer {
         });
     }
 
+    insertStep(barIndex, beatIndex, stepIndex) {
+        console.log(`[Sequencer] insertStep: Bar ${barIndex}, Beat ${beatIndex}, Target StepIndex (insert after): ${stepIndex}`);
+        if (!this.bars[barIndex]) return;
+        const bar = this.bars[barIndex];
+        if (beatIndex < 0 || beatIndex >= bar.beats.length) return;
+
+        bar.beats[beatIndex].subdivision += 1;
+
+        bar.tracks.forEach((track, tIdx) => {
+            if (track.pattern[beatIndex]) {
+                const oldLen = track.pattern[beatIndex].length;
+                // Insert at stepIndex + 1. If stepIndex is -1 (from beatCell), append at end.
+                const insertPos = (stepIndex === -1) ? oldLen : (stepIndex + 1);
+                console.log(`  > Track ${tIdx}: Splicing at ${insertPos}`);
+                track.pattern[beatIndex].splice(insertPos, 0, false);
+            }
+        });
+    }
+
+    insertStepAllBars(beatIndex, stepIndex) {
+        console.log(`[Sequencer] insertStepAllBars: Beat ${beatIndex}, Step ${stepIndex}`);
+        this.bars.forEach((bar, barIndex) => {
+            if (beatIndex < bar.beats.length) {
+                this.insertStep(barIndex, beatIndex, stepIndex);
+            }
+        });
+    }
+
+    insertStepBar(barIndex, stepIndex) {
+        console.log(`[Sequencer] insertStepBar: Bar ${barIndex}, Step ${stepIndex}`);
+        const bar = this.bars[barIndex];
+        if (!bar) return;
+        bar.beats.forEach((beat, bIndex) => {
+            // When inserting for the whole bar, we match the relative position if possible
+            const targetIndex = (stepIndex === -1) ? -1 : Math.min(stepIndex, beat.subdivision - 1);
+            this.insertStep(barIndex, bIndex, targetIndex);
+        });
+    }
+
+    insertStepGlobal(stepIndex) {
+        console.log(`[Sequencer] insertStepGlobal: Step ${stepIndex}`);
+        this.bars.forEach((bar, barIndex) => {
+            bar.beats.forEach((beat, bIndex) => {
+                const targetIndex = (stepIndex === -1) ? -1 : Math.min(stepIndex, beat.subdivision - 1);
+                this.insertStep(barIndex, bIndex, targetIndex);
+            });
+        });
+    }
+
     removeStepAllBars(beatIndex, stepIndex) {
         console.log(`[Batch Remove] Beat: ${beatIndex}, Step: ${stepIndex}`);
         this.bars.forEach((bar, barIndex) => {
@@ -417,12 +466,15 @@ class Sequencer {
     }
 
     removeStepBar(barIndex, stepIndex) {
-        console.log(`[Bar Remove] Bar: ${barIndex}, Step: ${stepIndex}`);
+        console.log(`[Bar Remove] Bar: ${barIndex}, Target Step Index: ${stepIndex}`);
         const bar = this.bars[barIndex];
         if (!bar) return;
-
         bar.beats.forEach((beat, bIndex) => {
-            this.removeStep(barIndex, bIndex, stepIndex);
+            // Match the index if possible, otherwise skip or cap
+            const targetIndex = (stepIndex === -1) ? -1 : Math.min(stepIndex, beat.subdivision - 1);
+            if (targetIndex !== -1) {
+                this.removeStep(barIndex, bIndex, targetIndex);
+            }
         });
     }
 
@@ -602,6 +654,7 @@ class UI {
         this.ctxAddBtn = document.getElementById('ctx-add-step');
         this.ctxAddBarBtn = document.getElementById('ctx-add-step-bar');
         this.ctxAddAllBtn = document.getElementById('ctx-add-step-all');
+        this.ctxAddGlobalBtn = document.getElementById('ctx-add-step-global');
         this.ctxDelBtn = document.getElementById('ctx-del-step');
         this.ctxDelBarBtn = document.getElementById('ctx-del-step-bar');
         this.ctxDelAllBtn = document.getElementById('ctx-del-step-all');
@@ -722,7 +775,13 @@ class UI {
                     stepIndex = parseInt(btn.dataset.step);
 
                     this.ctxDelBtn.classList.remove('disabled');
-                    this.ctxDelBtn.innerText = `ステップ${stepIndex + 1}を削除`;
+                    this.ctxDelBtn.innerText = `Bar${barIndex + 1}: ステップ${stepIndex + 1}を削除`;
+                    this.ctxAddBarBtn.innerText = `Bar${barIndex + 1}全体にステップを右隣に追加`;
+                    this.ctxDelBarBtn.innerText = `Bar${barIndex + 1}の指定位置ステップを全て削除`;
+                    this.ctxAddGlobalBtn.innerText = `全てのSTEP${stepIndex + 1}の右隣にステップを追加`;
+                    this.ctxDelAllBtn.classList.remove('disabled');
+                    this.ctxDelBarBtn.classList.remove('disabled');
+                    this.ctxAddGlobalBtn.classList.remove('disabled');
                 } else if (beatCell) {
                     // Try to find first button to get metadata
                     const firstBtn = beatCell.querySelector('.step-btn');
@@ -733,7 +792,13 @@ class UI {
                     stepIndex = -1;
                     trackIndex = -1;
                     this.ctxDelBtn.classList.add('disabled');
-                    this.ctxDelBtn.innerText = "Delete This Step";
+                    this.ctxDelBtn.innerText = "選択箇所を削除";
+                    this.ctxAddBarBtn.innerText = `Bar${barIndex + 1}全体にステップを末尾に追加`;
+                    this.ctxDelBarBtn.innerText = `Bar${barIndex + 1}の指定位置を削除`;
+                    this.ctxAddGlobalBtn.innerText = "全ての拍の末尾にステップを追加";
+                    this.ctxDelAllBtn.classList.add('disabled');
+                    this.ctxDelBarBtn.classList.add('disabled');
+                    this.ctxAddGlobalBtn.classList.remove('disabled');
                 }
 
                 this.ctxTarget = { bar: barIndex, track: trackIndex, beat: beatIndex, step: stepIndex };
@@ -746,10 +811,10 @@ class UI {
 
         this.ctxAddBtn.addEventListener('click', () => {
             const t = this.ctxTarget;
-            console.log("Ctx: Add Step", t);
+            console.log("UI: Add Step Clicked", t);
+            // Allow stepIndex -1 if we want to support adding to the end of a beatCell click
             if (t.bar !== -1 && t.beat !== -1) {
-                const currentSubdiv = this.seq.bars[t.bar].beats[t.beat].subdivision;
-                this.seq.updateBeatSubdivision(t.bar, t.beat, currentSubdiv + 1);
+                this.seq.insertStep(t.bar, t.beat, t.step);
                 this.renderGrid();
             }
             this.ctxMenu.classList.add('hidden');
@@ -757,9 +822,9 @@ class UI {
 
         this.ctxAddBarBtn.addEventListener('click', () => {
             const t = this.ctxTarget;
-            console.log("Ctx: Add Bar", t);
+            console.log("UI: Add Step Bar Clicked", t);
             if (t.bar !== -1) {
-                this.seq.updateBeatSubdivisionBar(t.bar, 1);
+                this.seq.insertStepBar(t.bar, t.step);
                 this.renderGrid();
             }
             this.ctxMenu.classList.add('hidden');
@@ -767,19 +832,25 @@ class UI {
 
         this.ctxAddAllBtn.addEventListener('click', () => {
             const t = this.ctxTarget;
-            console.log("Ctx: Add All", t);
+            console.log("UI: Add Step All Clicked", t);
             if (t.beat !== -1) {
-                this.seq.updateBeatSubdivisionAllBars(t.beat, 1);
+                this.seq.insertStepAllBars(t.beat, t.step);
                 this.renderGrid();
-            } else {
-                console.warn("Ctx: Add All - Beat is -1");
             }
+            this.ctxMenu.classList.add('hidden');
+        });
+
+        this.ctxAddGlobalBtn.addEventListener('click', () => {
+            const t = this.ctxTarget;
+            console.log("UI: Add Step Global Clicked", t);
+            this.seq.insertStepGlobal(t.step);
+            this.renderGrid();
             this.ctxMenu.classList.add('hidden');
         });
 
         this.ctxDelBtn.addEventListener('click', () => {
             const t = this.ctxTarget;
-            console.log("Ctx: Del Step", t);
+            console.log("UI: Del Step Clicked", t);
             if (t.bar !== -1 && t.beat !== -1 && t.step !== -1) {
                 this.seq.removeStep(t.bar, t.beat, t.step);
                 this.renderGrid();
@@ -787,24 +858,22 @@ class UI {
             this.ctxMenu.classList.add('hidden');
         });
 
-        this.ctxDelBarBtn.addEventListener('click', () => {
+        this.ctxDelAllBtn.addEventListener('click', () => {
             const t = this.ctxTarget;
-            console.log("Ctx: Del Bar", t);
-            if (t.bar !== -1 && t.step !== -1) {
-                this.seq.removeStepBar(t.bar, t.step);
+            console.log("UI: Del Step All Clicked", t);
+            if (t.beat !== -1 && t.step !== -1) {
+                this.seq.removeStepAllBars(t.beat, t.step);
                 this.renderGrid();
             }
             this.ctxMenu.classList.add('hidden');
         });
 
-        this.ctxDelAllBtn.addEventListener('click', () => {
+        this.ctxDelBarBtn.addEventListener('click', () => {
             const t = this.ctxTarget;
-            console.log("Ctx: Del All", t);
-            if (t.beat !== -1 && t.step !== -1) {
-                this.seq.removeStepAllBars(t.beat, t.step);
+            console.log("UI: Del Step Bar Clicked", t);
+            if (t.bar !== -1 && t.step !== -1) {
+                this.seq.removeStepBar(t.bar, t.step);
                 this.renderGrid();
-            } else {
-                console.warn("Ctx: Del All - Beat or Step is -1");
             }
             this.ctxMenu.classList.add('hidden');
         });
