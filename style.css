@@ -652,29 +652,52 @@ main {
 .game-header {
     display: flex;
     justify-content: space-between;
-    align-items: center;
+    align-items: flex-end;
     margin-bottom: 20px;
-    gap: 20px;
+    gap: 30px;
+    flex-wrap: wrap;
 }
 
-.game-settings-mini {
+.game-settings-area {
+    display: flex;
+    gap: 20px;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 10px 15px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.game-settings-group {
     display: flex;
     flex-direction: column;
-    gap: 5px;
-    min-width: 150px;
+    gap: 4px;
+    min-width: 120px;
 }
 
-.game-settings-mini label {
-    font-size: 0.7rem;
+.game-settings-group label {
+    font-size: 0.65rem;
     font-weight: 800;
     color: var(--text-muted);
+    letter-spacing: 0.5px;
 }
 
-.game-settings-mini input[type="range"] {
-    width: 100%;
+.game-settings-group select {
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #fff;
+    padding: 4px 8px;
+    font-size: 0.75rem;
+    border-radius: 4px;
+    outline: none;
+    cursor: pointer;
+}
+
+.game-settings-group select:hover {
+    border-color: var(--primary-color);
 }
 
 .score-container,
+.note-counter-container,
 .combo-container {
     font-family: 'Inter', sans-serif;
     font-weight: 800;
@@ -776,19 +799,19 @@ main {
     }
 }
 
-.note-perfect {
-    color: #00f2ff;
-    text-shadow: 0 0 10px rgba(0, 242, 255, 0.8);
+.note-excellent {
+    color: #00ff88;
+    text-shadow: 0 0 10px #00ff88;
 }
 
 .note-great {
-    color: #00ff88;
-    text-shadow: 0 0 10px rgba(0, 255, 136, 0.8);
+    color: #00ffff;
+    text-shadow: 0 0 10px #00ffff;
 }
 
-.note-ok {
-    color: #ffaa00;
-    text-shadow: 0 0 10px rgba(255, 170, 0, 0.8);
+.note-nice {
+    color: #ffff00;
+    text-shadow: 0 0 10px #ffff00;
 }
 
 .note-miss {

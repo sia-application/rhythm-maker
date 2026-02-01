@@ -91,11 +91,30 @@
 
             <div id="game-view" class="hidden glass-panel">
                 <div class="game-header">
-                    <div class="game-settings-mini">
-                        <label>SPEED: <span id="game-speed-val">1.0</span></label>
-                        <input type="range" id="game-speed-slider" min="0.5" max="10" step="0.5" value="1.0">
+                    <div class="game-settings-area">
+                        <div class="game-settings-group">
+                            <label>SPEED: <span id="game-speed-val">1.0</span></label>
+                            <input type="range" id="game-speed-slider" min="0.5" max="10" step="0.5" value="1.0">
+                        </div>
+                        <div class="game-settings-group">
+                            <label>HIT CRITERIA</label>
+                            <select id="hit-criteria-select">
+                                <option value="nice">Excellent+Great+Nice</option>
+                                <option value="great">Excellent+Great</option>
+                                <option value="excellent">Excellent Only</option>
+                            </select>
+                        </div>
+                        <div class="game-settings-group">
+                            <label>PLAYBACK</label>
+                            <select id="playback-mode-select">
+                                <option value="loop">Loop</option>
+                                <option value="stop">Stop at End</option>
+                            </select>
+                        </div>
                     </div>
                     <div class="score-container">SCORE: <span id="game-score">0</span></div>
+                    <div class="note-counter-container">NOTES: <span id="game-hits">0</span> / <span
+                            id="game-total-notes">0</span></div>
                     <div class="combo-container"><span id="game-combo">0</span> COMBO</div>
                     <div id="game-status" class="game-status">READY</div>
                 </div>

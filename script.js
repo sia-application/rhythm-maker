@@ -8,6 +8,7 @@ class AudioEngine {
         this.ctx = null;
         this.masterGain = null;
         this.isInitialized = false;
+        this.activeNodes = new Set(); // Track scheduled nodes
         // Instruments
         this.instruments = {
             'metronome': { freq: 1000, decay: 0.05, type: 'square' },
@@ -64,6 +65,9 @@ class AudioEngine {
         osc.connect(gain);
         gain.connect(this.masterGain);
 
+        this.activeNodes.add(osc);
+        osc.onended = () => this.activeNodes.delete(osc);
+
         osc.start(time);
         osc.stop(time + decay);
     }
@@ -94,7 +98,23 @@ class AudioEngine {
         filter.connect(gain);
         gain.connect(this.masterGain);
 
+        this.activeNodes.add(noise);
+        noise.onended = () => this.activeNodes.delete(noise);
+
         noise.start(time);
+        // noise stop is automatic as it's a buffer source with specific length
+    }
+
+    stopAll() {
+        if (!this.ctx) return;
+        this.activeNodes.forEach(node => {
+            try {
+                node.stop();
+            } catch (e) {
+                // Ignore errors if node already stopped
+            }
+        });
+        this.activeNodes.clear();
     }
 
     playInstrument(name, time = 0, trackVolume = 1.0) {
@@ -194,6 +214,7 @@ class Sequencer {
         this.nextNoteTime = 0;
         this.lookahead = 25.0; // ms
         this.noteSpeed = 1.0; // Default speed
+        this.playbackMode = 'loop'; // 'loop' or 'stop'
         this.updateScheduleAheadTime();
         this.timerID = null;
 
@@ -604,6 +625,11 @@ class Sequencer {
                 this.currentBeatIndex = 0;
                 this.currentBarIndex++;
                 if (this.currentBarIndex >= this.bars.length) {
+                    // End of Project
+                    if (this.playbackMode === 'stop') {
+                        this.stop();
+                        return;
+                    }
                     // Loop Sequence
                     this.currentBarIndex = 0;
                 }
@@ -660,6 +686,7 @@ class Sequencer {
             // PAUSE
             this.isPlaying = false;
             clearTimeout(this.timerID);
+            this.audio.stopAll();
             ui.updatePlayButton(false);
         } else {
             // PLAY (or RESUME)
@@ -676,6 +703,7 @@ class Sequencer {
     stop() {
         this.isPlaying = false;
         clearTimeout(this.timerID);
+        this.audio.stopAll();
         this.currentBarIndex = 0;
         this.currentBeatIndex = 0;
         this.currentStepInBeat = 0;
@@ -733,21 +761,25 @@ class RhythmGame {
         this.combo = 0;
         this.container = document.getElementById('game-lanes');
         this.scoreEl = document.getElementById('game-score');
+        this.hitEl = document.getElementById('game-hits');
+        this.totalNotesEl = document.getElementById('game-total-notes');
         this.comboEl = document.getElementById('game-combo');
         this.statusEl = document.getElementById('game-status');
         this.lanes = [];
         this.activeNotes = []; // { el, time, lane, judged }
         this.laneMap = {}; // trackIndex -> laneIndex
         this.isGameMode = false;
+        this.hitCriteria = 'nice'; // 'nice', 'great', or 'excellent'
         this.lastNoteTime = 0;
     }
 
     init() {
         this.container.innerHTML = '';
         this.lanes = [];
-        this.activeNotes = [];
         this.score = 0;
         this.combo = 0;
+        this.hitCount = 0;
+        this.totalNotes = this.calculateTotalNotes();
         console.log("RhythmGame: Initializing...", this.seq.bars);
         this.updateUI();
 
@@ -788,6 +820,20 @@ class RhythmGame {
         const judgmentLine = document.createElement('div');
         judgmentLine.className = 'judgment-line';
         this.container.appendChild(judgmentLine);
+    }
+
+    calculateTotalNotes() {
+        let count = 0;
+        this.seq.bars.forEach(bar => {
+            bar.tracks.forEach(track => {
+                track.pattern.forEach(beatPattern => {
+                    beatPattern.forEach(step => {
+                        if (step) count++;
+                    });
+                });
+            });
+        });
+        return count;
     }
 
     spawnNote(trackIndex, targetTime) {
@@ -885,26 +931,38 @@ class RhythmGame {
         let rating = 'MISS';
         let scoreAdd = 0;
         let ratingClass = 'note-miss';
+        let isHit = false;
 
         if (diff <= 50) {
-            rating = 'PERFECT';
+            rating = 'EXCELLENT';
             scoreAdd = 100;
-            ratingClass = 'note-perfect';
+            ratingClass = 'note-excellent';
             this.combo++;
+            isHit = true;
         } else if (diff <= 100) {
             rating = 'GREAT';
             scoreAdd = 50;
             ratingClass = 'note-great';
             this.combo++;
+            if (this.hitCriteria === 'nice' || this.hitCriteria === 'great') {
+                isHit = true;
+            }
         } else if (diff <= 150) {
-            rating = 'OK';
+            rating = 'NICE';
             scoreAdd = 20;
-            ratingClass = 'note-ok';
+            ratingClass = 'note-nice';
             this.combo++;
+            if (this.hitCriteria === 'nice') {
+                isHit = true;
+            }
         } else {
             rating = 'MISS';
             this.combo = 0;
             ratingClass = 'note-miss';
+        }
+
+        if (isHit) {
+            this.hitCount++;
         }
 
         this.score += scoreAdd;
@@ -927,8 +985,10 @@ class RhythmGame {
     }
 
     updateUI() {
-        this.scoreEl.innerText = this.score;
-        this.comboEl.innerText = this.combo;
+        if (this.scoreEl) this.scoreEl.innerText = this.score;
+        if (this.hitEl) this.hitEl.innerText = this.hitCount;
+        if (this.totalNotesEl) this.totalNotesEl.innerText = this.totalNotes;
+        if (this.comboEl) this.comboEl.innerText = this.combo;
     }
 }
 
@@ -967,6 +1027,8 @@ class UI {
         this.gameView = document.getElementById('game-view');
         this.gameSpeedSlider = document.getElementById('game-speed-slider');
         this.gameSpeedVal = document.getElementById('game-speed-val');
+        this.hitCriteriaSelect = document.getElementById('hit-criteria-select');
+        this.playbackModeSelect = document.getElementById('playback-mode-select');
         this.game = new RhythmGame(this.seq);
         this.isGameMode = false;
 
@@ -1092,6 +1154,20 @@ class UI {
                 this.seq.noteSpeed = val;
                 this.seq.updateScheduleAheadTime();
                 if (this.gameSpeedVal) this.gameSpeedVal.innerText = val.toFixed(1);
+            });
+        }
+
+        // Hit Criteria
+        if (this.hitCriteriaSelect) {
+            this.hitCriteriaSelect.addEventListener('change', (e) => {
+                this.game.hitCriteria = e.target.value;
+            });
+        }
+
+        // Playback Mode
+        if (this.playbackModeSelect) {
+            this.playbackModeSelect.addEventListener('change', (e) => {
+                this.seq.playbackMode = e.target.value;
             });
         }
 
