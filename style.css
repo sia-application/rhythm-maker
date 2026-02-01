@@ -148,14 +148,45 @@ button {
 }
 
 .icon-btn {
-    width: 40px;
-    height: 40px;
+    width: 44px;
+    height: 44px;
     border-radius: 50%;
     padding: 0;
     display: flex;
     justify-content: center;
     align-items: center;
-    font-size: 1.2rem;
+}
+
+.glass-icon-btn {
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    backdrop-filter: blur(var(--glass-blur));
+    color: var(--text-muted);
+    box-shadow: none;
+}
+
+.glass-icon-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    transform: scale(1.1);
+}
+
+.glass-icon-btn.play-glow:hover,
+.glass-icon-btn.isPlaying {
+    color: var(--primary-color);
+    border-color: var(--primary-color);
+    box-shadow: 0 0 15px var(--primary-glow);
+}
+
+.glass-icon-btn.stop-glow:hover {
+    color: var(--secondary-color);
+    border-color: var(--secondary-color);
+    box-shadow: 0 0 15px var(--secondary-glow);
+}
+
+.control-svg {
+    width: 20px;
+    height: 20px;
+    transition: all 0.2s;
 }
 
 .large-btn {
