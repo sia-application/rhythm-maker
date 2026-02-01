@@ -1239,7 +1239,14 @@ class UI {
 
         const startTime = baseTime !== null ? baseTime : this.seq.audio.ctx.currentTime;
         const labels = ["3", "2", "1", "GO!"];
-        let lastBeatIndex = -1;
+
+        // Instant first trigger to avoid 1-frame jitter
+        this.countdownNumber.innerText = labels[0];
+        this.countdownNumber.classList.remove('countdown-pulse');
+        void this.countdownNumber.offsetHeight; // force reflow
+        this.countdownNumber.classList.add('countdown-pulse');
+
+        let lastBeatIndex = 0;
 
         // Schedule countdown audio blips precisely
         for (let i = 0; i < 4; i++) {
@@ -1255,17 +1262,19 @@ class UI {
 
             const contextTime = this.seq.audio.ctx.currentTime;
             const elapsed = contextTime - startTime;
-            const currentBeatIndex = Math.floor(elapsed / beatTime + 0.05); // slight epsilon
+
+            // Refined epsilon: 20ms fixed offset for better "predetermined" appearance
+            const currentBeatIndex = Math.floor((elapsed + 0.02) / beatTime);
 
             if (currentBeatIndex !== lastBeatIndex) {
-                if (currentBeatIndex < 4) {
+                if (currentBeatIndex >= 0 && currentBeatIndex < 4) {
                     this.countdownNumber.innerText = labels[currentBeatIndex];
                     // Retrigger animation
                     this.countdownNumber.classList.remove('countdown-pulse');
-                    this.countdownNumber.offsetHeight; // force reflow
+                    void this.countdownNumber.offsetHeight; // force reflow
                     this.countdownNumber.classList.add('countdown-pulse');
-                } else {
-                    // Hide when music starts
+                } else if (currentBeatIndex >= 4) {
+                    // Hide when music starts 
                     this.countdownOverlay.classList.add('hidden');
                     return; // End of countdown
                 }

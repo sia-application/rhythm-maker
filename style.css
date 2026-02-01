@@ -892,13 +892,13 @@ main {
 
 @keyframes countdown-bounce {
     0% {
-        transform: scale(2);
-        opacity: 0;
+        transform: scale(1.5);
+        opacity: 1;
+        filter: brightness(2);
     }
 
-    30% {
-        transform: scale(1);
-        opacity: 1;
+    15% {
+        filter: brightness(1);
     }
 
     100% {
