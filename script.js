@@ -167,6 +167,7 @@ class Sequencer {
         this.timerID = null;
 
         // Initial setup
+        this.lastSelectedInstrument = 'metronome';
         this.addBar(); // Adds first bar
     }
 
@@ -182,8 +183,8 @@ class Sequencer {
             bar.beats.push({ subdivision: 4 });
         }
         // Add default tracks
-        // Default to just Metronome (1 track) as requested.
-        const defaultTracks = ['metronome'];
+        // Default to just last selected instrument (1 track) as requested.
+        const defaultTracks = [this.lastSelectedInstrument];
 
         defaultTracks.forEach(type => {
             const track = {
@@ -212,13 +213,14 @@ class Sequencer {
         }
     }
 
-    addTrack(barIndex, type = 'metronome') {
+    addTrack(barIndex, type = null) {
         if (barIndex < 0 || barIndex >= this.bars.length) return;
 
+        const useType = type || this.lastSelectedInstrument;
         const bar = this.bars[barIndex];
         const track = {
             id: this.nextTrackId++,
-            type: type,
+            type: useType,
             pattern: []
         };
 
@@ -243,6 +245,7 @@ class Sequencer {
         const bar = this.bars[barIndex];
         if (trackIndex >= 0 && trackIndex < bar.tracks.length) {
             bar.tracks[trackIndex].type = newType;
+            this.lastSelectedInstrument = newType;
         }
     }
 
