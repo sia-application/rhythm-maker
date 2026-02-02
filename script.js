@@ -895,6 +895,217 @@ class Sequencer {
             ui.renderGrid();
         }
     }
+
+    // Serialize current state to JSON object
+    serialize() {
+        return {
+            bpm: this.bpm,
+            timeSignature: this.timeSignature,
+            playbackMode: this.playbackMode,
+            lastSelectedInstrument: this.lastSelectedInstrument,
+            bars: this.bars.map(bar => ({
+                beats: bar.beats.map(b => ({ subdivision: b.subdivision })),
+                tracks: bar.tracks.map(track => ({
+                    type: track.type,
+                    volume: track.volume,
+                    pattern: track.pattern.map(beatPattern => [...beatPattern])
+                }))
+            }))
+        };
+    }
+
+    // Deserialize from JSON object
+    deserialize(data) {
+        if (!data) return;
+
+        this.bpm = data.bpm || 120;
+        this.timeSignature = data.timeSignature || 4;
+        this.playbackMode = data.playbackMode || 'stop';
+        this.lastSelectedInstrument = data.lastSelectedInstrument || 'metronome';
+
+        this.bars = [];
+        if (data.bars && Array.isArray(data.bars)) {
+            data.bars.forEach((barData, barIndex) => {
+                const bar = {
+                    id: barIndex,
+                    beats: barData.beats.map(b => ({ subdivision: b.subdivision })),
+                    tracks: barData.tracks.map(trackData => ({
+                        id: this.nextTrackId++,
+                        type: trackData.type,
+                        volume: trackData.volume || 1.0,
+                        pattern: trackData.pattern.map(bp => [...bp])
+                    }))
+                };
+                this.bars.push(bar);
+            });
+        }
+
+        // Reset playback state
+        this.currentBarIndex = 0;
+        this.currentBeatIndex = 0;
+        this.currentStepInBeat = 0;
+    }
+}
+
+// Preset Manager for saving/loading rhythms
+class PresetManager {
+    constructor() {
+        this.PRESETS_KEY = 'rhythmmaker_presets';
+        this.FOLDERS_KEY = 'rhythmmaker_folders';
+    }
+
+    // Get all folders
+    getFolders() {
+        try {
+            const data = localStorage.getItem(this.FOLDERS_KEY);
+            return data ? JSON.parse(data) : [];
+        } catch (e) {
+            console.error('Error loading folders:', e);
+            return [];
+        }
+    }
+
+    // Save folders
+    saveFolders(folders) {
+        try {
+            localStorage.setItem(this.FOLDERS_KEY, JSON.stringify(folders));
+        } catch (e) {
+            console.error('Error saving folders:', e);
+        }
+    }
+
+    // Create folder
+    createFolder(name) {
+        const folders = this.getFolders();
+        const folder = {
+            id: 'folder_' + Date.now(),
+            name: name,
+            createdAt: new Date().toISOString()
+        };
+        folders.push(folder);
+        this.saveFolders(folders);
+        return folder;
+    }
+
+    // Rename folder
+    renameFolder(folderId, newName) {
+        const folders = this.getFolders();
+        const folder = folders.find(f => f.id === folderId);
+        if (folder) {
+            folder.name = newName;
+            this.saveFolders(folders);
+        }
+    }
+
+    // Delete folder (moves presets to root)
+    deleteFolder(folderId) {
+        const folders = this.getFolders();
+        const index = folders.findIndex(f => f.id === folderId);
+        if (index !== -1) {
+            folders.splice(index, 1);
+            this.saveFolders(folders);
+
+            // Move presets in this folder to root
+            const presets = this.getPresets();
+            presets.forEach(p => {
+                if (p.folderId === folderId) {
+                    p.folderId = null;
+                }
+            });
+            this.savePresets(presets);
+        }
+    }
+
+    // Get all presets
+    getPresets() {
+        try {
+            const data = localStorage.getItem(this.PRESETS_KEY);
+            return data ? JSON.parse(data) : [];
+        } catch (e) {
+            console.error('Error loading presets:', e);
+            return [];
+        }
+    }
+
+    // Save presets array
+    savePresets(presets) {
+        try {
+            localStorage.setItem(this.PRESETS_KEY, JSON.stringify(presets));
+        } catch (e) {
+            console.error('Error saving presets:', e);
+        }
+    }
+
+    // Save a new preset
+    savePreset(name, folderId, sequencerData) {
+        const presets = this.getPresets();
+        const preset = {
+            id: 'preset_' + Date.now(),
+            name: name,
+            folderId: folderId || null,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            data: sequencerData
+        };
+        presets.push(preset);
+        this.savePresets(presets);
+        return preset;
+    }
+
+    // Update an existing preset
+    updatePreset(presetId, sequencerData) {
+        const presets = this.getPresets();
+        const preset = presets.find(p => p.id === presetId);
+        if (preset) {
+            preset.data = sequencerData;
+            preset.updatedAt = new Date().toISOString();
+            this.savePresets(presets);
+        }
+    }
+
+    // Rename preset
+    renamePreset(presetId, newName) {
+        const presets = this.getPresets();
+        const preset = presets.find(p => p.id === presetId);
+        if (preset) {
+            preset.name = newName;
+            preset.updatedAt = new Date().toISOString();
+            this.savePresets(presets);
+        }
+    }
+
+    // Move preset to folder
+    movePreset(presetId, folderId) {
+        const presets = this.getPresets();
+        const preset = presets.find(p => p.id === presetId);
+        if (preset) {
+            preset.folderId = folderId || null;
+            preset.updatedAt = new Date().toISOString();
+            this.savePresets(presets);
+        }
+    }
+
+    // Delete preset
+    deletePreset(presetId) {
+        const presets = this.getPresets();
+        const index = presets.findIndex(p => p.id === presetId);
+        if (index !== -1) {
+            presets.splice(index, 1);
+            this.savePresets(presets);
+        }
+    }
+
+    // Get preset by ID
+    getPreset(presetId) {
+        const presets = this.getPresets();
+        return presets.find(p => p.id === presetId);
+    }
+
+    // Get presets by folder
+    getPresetsByFolder(folderId) {
+        const presets = this.getPresets();
+        return presets.filter(p => p.folderId === folderId);
+    }
 }
 
 class RhythmGame {
@@ -1247,8 +1458,30 @@ class UI {
 
         this.ctxTarget = { bar: -1, beat: -1, step: -1 };
 
+        // Preset Manager
+        this.presetManager = new PresetManager();
+        this.presetPanel = document.getElementById('preset-panel');
+        this.presetOverlay = document.getElementById('preset-overlay');
+        this.presetBtn = document.getElementById('preset-btn');
+        this.presetPanelClose = document.getElementById('preset-panel-close');
+        this.saveNewBtn = document.getElementById('save-new-btn');
+        this.addFolderBtn = document.getElementById('add-folder-btn');
+        this.folderForm = document.getElementById('folder-form');
+        this.folderNameInput = document.getElementById('folder-name-input');
+        this.folderCreateBtn = document.getElementById('folder-create-btn');
+        this.folderCancelBtn = document.getElementById('folder-cancel-btn');
+        this.folderList = document.getElementById('folder-list');
+        this.presetList = document.getElementById('preset-list');
+        this.saveDialog = document.getElementById('save-dialog');
+        this.presetNameInput = document.getElementById('preset-name-input');
+        this.presetFolderSelect = document.getElementById('preset-folder-select');
+        this.saveCancelBtn = document.getElementById('save-cancel-btn');
+        this.saveConfirmBtn = document.getElementById('save-confirm-btn');
+        this.selectedFolderId = null; // Currently selected folder filter
+
         this.setupListeners();
         this.setupContextMenu();
+        this.setupPresetListeners();
         this.renderGrid();
         console.log("UI: Initialized successfully");
     }
@@ -2096,7 +2329,327 @@ class UI {
         }
         this.playBtn.classList.toggle('isPlaying', isPlaying);
     }
+
+    // ==================== PRESET MANAGEMENT ====================
+
+    setupPresetListeners() {
+        // Helper to add both click and touch events
+        const addTapListener = (element, handler) => {
+            element.addEventListener('click', handler);
+            element.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                handler(e);
+            });
+        };
+
+        // Open panel
+        addTapListener(this.presetBtn, () => this.openPresetPanel());
+
+        // Close panel
+        addTapListener(this.presetPanelClose, () => this.closePresetPanel());
+        addTapListener(this.presetOverlay, () => this.closePresetPanel());
+
+        // Save new preset
+        addTapListener(this.saveNewBtn, () => this.openSaveDialog());
+
+        // Add folder - show form
+        addTapListener(this.addFolderBtn, () => this.showFolderForm());
+
+        // Folder form - create
+        addTapListener(this.folderCreateBtn, () => this.createNewFolder());
+
+        // Folder form - cancel
+        addTapListener(this.folderCancelBtn, () => this.hideFolderForm());
+
+        // Folder input - Enter key to create
+        this.folderNameInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                this.createNewFolder();
+            } else if (e.key === 'Escape') {
+                this.hideFolderForm();
+            }
+        });
+
+        // Save dialog buttons
+        addTapListener(this.saveCancelBtn, () => this.closeSaveDialog());
+        addTapListener(this.saveConfirmBtn, () => this.confirmSavePreset());
+
+        // Close dialog on overlay click/touch
+        this.saveDialog.addEventListener('click', (e) => {
+            if (e.target === this.saveDialog) {
+                this.closeSaveDialog();
+            }
+        });
+        this.saveDialog.addEventListener('touchend', (e) => {
+            if (e.target === this.saveDialog) {
+                e.preventDefault();
+                this.closeSaveDialog();
+            }
+        });
+    }
+
+    showFolderForm() {
+        this.folderForm.classList.remove('hidden');
+        this.addFolderBtn.classList.add('hidden');
+        this.folderNameInput.value = '';
+        this.folderNameInput.focus();
+    }
+
+    hideFolderForm() {
+        this.folderForm.classList.add('hidden');
+        this.addFolderBtn.classList.remove('hidden');
+        this.folderNameInput.value = '';
+    }
+
+    openPresetPanel() {
+        this.presetPanel.classList.remove('hidden');
+        this.presetOverlay.classList.remove('hidden');
+        // Trigger animation
+        requestAnimationFrame(() => {
+            this.presetPanel.classList.add('active');
+            this.presetOverlay.classList.add('active');
+        });
+        this.renderFolderList();
+        this.renderPresetList();
+    }
+
+    closePresetPanel() {
+        this.presetPanel.classList.remove('active');
+        this.presetOverlay.classList.remove('active');
+        setTimeout(() => {
+            this.presetPanel.classList.add('hidden');
+            this.presetOverlay.classList.add('hidden');
+        }, 300);
+    }
+
+    openSaveDialog() {
+        this.presetNameInput.value = '';
+        this.updateFolderSelect();
+        this.saveDialog.classList.remove('hidden');
+        requestAnimationFrame(() => {
+            this.saveDialog.classList.add('active');
+            this.presetNameInput.focus();
+        });
+    }
+
+    closeSaveDialog() {
+        this.saveDialog.classList.remove('active');
+        setTimeout(() => {
+            this.saveDialog.classList.add('hidden');
+        }, 200);
+    }
+
+    updateFolderSelect() {
+        const folders = this.presetManager.getFolders();
+        this.presetFolderSelect.innerHTML = '<option value="">ルート（フォルダなし）</option>';
+        folders.forEach(folder => {
+            const option = document.createElement('option');
+            option.value = folder.id;
+            option.textContent = folder.name;
+            this.presetFolderSelect.appendChild(option);
+        });
+    }
+
+    confirmSavePreset() {
+        const name = this.presetNameInput.value.trim();
+        if (!name) {
+            alert('プリセット名を入力してください');
+            return;
+        }
+
+        const folderId = this.presetFolderSelect.value || null;
+        const data = this.seq.serialize();
+
+        this.presetManager.savePreset(name, folderId, data);
+        this.closeSaveDialog();
+        this.renderPresetList();
+    }
+
+    createNewFolder() {
+        const name = this.folderNameInput.value.trim();
+        if (!name) {
+            this.folderNameInput.focus();
+            return;
+        }
+        this.presetManager.createFolder(name);
+        this.hideFolderForm();
+        this.renderFolderList();
+    }
+
+    renderFolderList() {
+        const folders = this.presetManager.getFolders();
+        this.folderList.innerHTML = '';
+
+        // "All" option
+        const allItem = document.createElement('div');
+        allItem.className = 'folder-item' + (this.selectedFolderId === null ? ' active' : '');
+        allItem.innerHTML = `
+            <span class="folder-item-name">📂 すべて</span>
+        `;
+        const selectAll = () => {
+            this.selectedFolderId = null;
+            this.renderFolderList();
+            this.renderPresetList();
+        };
+        allItem.addEventListener('click', selectAll);
+        allItem.addEventListener('touchend', (e) => { e.preventDefault(); selectAll(); });
+        this.folderList.appendChild(allItem);
+
+        folders.forEach(folder => {
+            const item = document.createElement('div');
+            item.className = 'folder-item' + (this.selectedFolderId === folder.id ? ' active' : '');
+            item.innerHTML = `
+                <span class="folder-item-name">📁 ${this.escapeHtml(folder.name)}</span>
+                <div class="folder-item-actions">
+                    <button class="folder-action-btn rename" title="名前変更">✏️</button>
+                    <button class="folder-action-btn delete" title="削除">🗑️</button>
+                </div>
+            `;
+
+            // Click/Touch to filter
+            const selectFolder = (e) => {
+                if (e.target.classList.contains('folder-action-btn')) return;
+                this.selectedFolderId = folder.id;
+                this.renderFolderList();
+                this.renderPresetList();
+            };
+            item.addEventListener('click', selectFolder);
+            item.addEventListener('touchend', (e) => { e.preventDefault(); selectFolder(e); });
+
+            // Rename
+            const renameBtn = item.querySelector('.rename');
+            const handleRename = (e) => {
+                e.stopPropagation();
+                const newName = prompt('新しいフォルダ名:', folder.name);
+                if (newName && newName.trim()) {
+                    this.presetManager.renameFolder(folder.id, newName.trim());
+                    this.renderFolderList();
+                }
+            };
+            renameBtn.addEventListener('click', handleRename);
+            renameBtn.addEventListener('touchend', (e) => { e.preventDefault(); handleRename(e); });
+
+            // Delete
+            const deleteBtn = item.querySelector('.delete');
+            const handleDelete = (e) => {
+                e.stopPropagation();
+                if (confirm(`フォルダ「${folder.name}」を削除しますか？\n（中のプリセットはルートに移動されます）`)) {
+                    this.presetManager.deleteFolder(folder.id);
+                    if (this.selectedFolderId === folder.id) {
+                        this.selectedFolderId = null;
+                    }
+                    this.renderFolderList();
+                    this.renderPresetList();
+                }
+            };
+            deleteBtn.addEventListener('click', handleDelete);
+            deleteBtn.addEventListener('touchend', (e) => { e.preventDefault(); handleDelete(e); });
+
+            this.folderList.appendChild(item);
+        });
+    }
+
+    renderPresetList() {
+        const allPresets = this.presetManager.getPresets();
+        const folders = this.presetManager.getFolders();
+
+        // Filter by selected folder
+        const presets = this.selectedFolderId === null
+            ? allPresets
+            : allPresets.filter(p => p.folderId === this.selectedFolderId);
+
+        this.presetList.innerHTML = '';
+
+        if (presets.length === 0) {
+            this.presetList.innerHTML = '<div class="preset-empty">プリセットがありません</div>';
+            return;
+        }
+
+        presets.forEach(preset => {
+            const folder = folders.find(f => f.id === preset.folderId);
+            const item = document.createElement('div');
+            item.className = 'preset-item';
+            item.innerHTML = `
+                <div class="preset-item-header">
+                    <span class="preset-item-name">${this.escapeHtml(preset.name)}</span>
+                    <div class="preset-item-actions">
+                        <button class="folder-action-btn rename" title="名前変更">✏️</button>
+                        <button class="folder-action-btn delete" title="削除">🗑️</button>
+                    </div>
+                </div>
+                <div class="preset-item-meta">
+                    <span>BPM: ${preset.data.bpm}</span>
+                    <span>${preset.data.bars ? preset.data.bars.length : 0} bars</span>
+                </div>
+                ${folder ? `<div class="preset-item-folder">📁 ${this.escapeHtml(folder.name)}</div>` : ''}
+            `;
+
+            // Load preset on click/touch
+            const handleLoad = (e) => {
+                if (e.target.classList.contains('folder-action-btn')) return;
+                this.loadPreset(preset);
+            };
+            item.addEventListener('click', handleLoad);
+            item.addEventListener('touchend', (e) => { e.preventDefault(); handleLoad(e); });
+
+            // Rename
+            const renameBtn = item.querySelector('.rename');
+            const handleRename = (e) => {
+                e.stopPropagation();
+                const newName = prompt('新しいプリセット名:', preset.name);
+                if (newName && newName.trim()) {
+                    this.presetManager.renamePreset(preset.id, newName.trim());
+                    this.renderPresetList();
+                }
+            };
+            renameBtn.addEventListener('click', handleRename);
+            renameBtn.addEventListener('touchend', (e) => { e.preventDefault(); handleRename(e); });
+
+            // Delete
+            const deleteBtn = item.querySelector('.delete');
+            const handleDelete = (e) => {
+                e.stopPropagation();
+                if (confirm(`プリセット「${preset.name}」を削除しますか？`)) {
+                    this.presetManager.deletePreset(preset.id);
+                    this.renderPresetList();
+                }
+            };
+            deleteBtn.addEventListener('click', handleDelete);
+            deleteBtn.addEventListener('touchend', (e) => { e.preventDefault(); handleDelete(e); });
+
+            this.presetList.appendChild(item);
+        });
+    }
+
+    loadPreset(preset) {
+        if (!preset || !preset.data) return;
+
+        // Deserialize data
+        this.seq.deserialize(preset.data);
+
+        // Update UI controls
+        this.bpmInput.value = this.seq.bpm;
+        this.bpmNumber.value = this.seq.bpm;
+        this.timeSigSelect.value = this.seq.timeSignature;
+        this.playbackModeSelect.value = this.seq.playbackMode;
+
+        // Re-render grid
+        this.renderGrid();
+
+        // Close panel
+        this.closePresetPanel();
+
+        console.log(`Loaded preset: ${preset.name}`);
+    }
+
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
 }
+
 
 // Global instances
 const audio = new AudioEngine();

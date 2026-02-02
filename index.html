@@ -19,9 +19,58 @@
         <header class="app-header">
             <h1>RHYTHM MAKER PRO</h1>
             <div class="header-controls">
+                <button id="preset-btn" class="btn-secondary">Preset</button>
                 <button id="view-toggle-btn" class="btn-secondary">Game Mode</button>
             </div>
         </header>
+
+        <!-- Preset Side Panel -->
+        <div id="preset-panel" class="preset-panel hidden">
+            <div class="preset-panel-header">
+                <h2>プリセット</h2>
+                <button id="preset-panel-close" class="preset-close-btn">✕</button>
+            </div>
+            <div class="preset-actions">
+                <button id="save-new-btn" class="btn-primary">💾 現在のパターンを保存</button>
+            </div>
+            <div class="preset-folders">
+                <h3>📁 フォルダ</h3>
+                <div id="folder-form" class="folder-form hidden">
+                    <input type="text" id="folder-name-input" placeholder="フォルダ名" class="folder-input">
+                    <button id="folder-create-btn" class="btn-primary folder-create-btn">作成</button>
+                    <button id="folder-cancel-btn" class="folder-cancel-btn">✕</button>
+                </div>
+                <button id="add-folder-btn" class="btn-secondary folder-add-btn">+ 新規フォルダ</button>
+                <div id="folder-list" class="folder-list"></div>
+            </div>
+            <div class="preset-list-section">
+                <h3>🎵 プリセット一覧</h3>
+                <div id="preset-list" class="preset-list"></div>
+            </div>
+        </div>
+        <div id="preset-overlay" class="preset-overlay hidden"></div>
+
+        <!-- Save Dialog -->
+        <div id="save-dialog" class="save-dialog hidden">
+            <div class="save-dialog-content">
+                <h3>プリセットを保存</h3>
+                <div class="save-form-group">
+                    <label for="preset-name-input">名前</label>
+                    <input type="text" id="preset-name-input" placeholder="プリセット名を入力" class="save-input">
+                </div>
+                <div class="save-form-group">
+                    <label for="preset-folder-select">フォルダ</label>
+                    <select id="preset-folder-select" class="save-select">
+                        <option value="">ルート（フォルダなし）</option>
+                    </select>
+                </div>
+                <div class="save-dialog-buttons">
+                    <button id="save-cancel-btn" class="btn-secondary">キャンセル</button>
+                    <button id="save-confirm-btn" class="btn-primary">保存</button>
+                </div>
+            </div>
+        </div>
+
 
         <main>
             <div class="controls-bar glass-panel">

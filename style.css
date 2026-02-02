@@ -135,9 +135,12 @@ button {
     color: var(--primary-color);
     border-radius: 6px;
     padding: 6px 12px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: rgba(0, 242, 255, 0.3);
 }
 
-.btn-secondary:hover {
+.btn-secondary:hover,
+.btn-secondary:active {
     background: rgba(0, 242, 255, 0.1);
 }
 
@@ -938,5 +941,838 @@ main {
     100% {
         transform: scale(1);
         opacity: 1;
+    }
+}
+
+/* ==================== PRESET PANEL ==================== */
+
+/* Preset Panel */
+.preset-panel {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 350px;
+    height: 100vh;
+    background: rgba(15, 17, 21, 0.98);
+    border-left: 1px solid var(--glass-border);
+    backdrop-filter: blur(20px);
+    z-index: 2000;
+    display: flex;
+    flex-direction: column;
+    transform: translateX(100%);
+    transition: transform 0.3s ease;
+    overflow: hidden;
+}
+
+.preset-panel.active {
+    transform: translateX(0);
+}
+
+#preset-panel.hidden {
+    display: flex !important;
+    transform: translateX(100%);
+}
+
+.preset-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1999;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+}
+
+#preset-overlay.hidden {
+    display: block !important;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.preset-overlay.active {
+    opacity: 1;
+    pointer-events: all;
+}
+
+.preset-panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    border-bottom: 1px solid var(--glass-border);
+}
+
+.preset-panel-header h2 {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--text-main);
+    margin: 0;
+}
+
+.preset-close-btn {
+    width: 32px;
+    height: 32px;
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    border-radius: 50%;
+    color: var(--text-muted);
+    font-size: 1rem;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: all 0.2s;
+}
+
+.preset-close-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    color: #fff;
+}
+
+.preset-actions {
+    padding: 15px 20px;
+    border-bottom: 1px solid var(--glass-border);
+}
+
+.preset-actions .btn-primary {
+    width: 100%;
+    padding: 12px;
+    font-size: 0.9rem;
+}
+
+.preset-folders {
+    padding: 15px 20px;
+    border-bottom: 1px solid var(--glass-border);
+}
+
+.preset-folders h3,
+.preset-list-section h3 {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin: 0 0 10px 0;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.folder-form {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 10px;
+    align-items: center;
+}
+
+.folder-form.hidden {
+    display: none;
+}
+
+.folder-input {
+    flex: 1;
+    padding: 8px 12px;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--glass-border);
+    border-radius: 6px;
+    color: #fff;
+    font-size: 0.85rem;
+    outline: none;
+}
+
+.folder-input:focus {
+    border-color: var(--primary-color);
+}
+
+.folder-input::placeholder {
+    color: var(--text-muted);
+}
+
+.folder-create-btn {
+    padding: 8px 12px;
+    font-size: 0.8rem;
+    white-space: nowrap;
+}
+
+.folder-cancel-btn {
+    width: 32px;
+    height: 32px;
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    border-radius: 50%;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.folder-cancel-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    color: #fff;
+}
+
+.folder-add-btn {
+    width: 100%;
+    padding: 8px;
+    font-size: 0.8rem;
+    margin-bottom: 10px;
+}
+
+.folder-list {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    max-height: 150px;
+    overflow-y: auto;
+}
+
+.folder-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.folder-item:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.folder-item.active {
+    background: rgba(0, 242, 255, 0.15);
+    border: 1px solid var(--primary-color);
+}
+
+.folder-item-name {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.85rem;
+    color: var(--text-main);
+}
+
+.folder-item-actions {
+    display: flex;
+    gap: 5px;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.folder-item:hover .folder-item-actions {
+    opacity: 1;
+}
+
+.folder-action-btn {
+    width: 24px;
+    height: 24px;
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    border-radius: 4px;
+    color: var(--text-muted);
+    font-size: 0.7rem;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.folder-action-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    color: #fff;
+}
+
+.folder-action-btn.delete:hover {
+    background: rgba(255, 0, 85, 0.3);
+    color: var(--secondary-color);
+}
+
+.preset-list-section {
+    flex: 1;
+    padding: 15px 20px;
+    overflow-y: auto;
+}
+
+.preset-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.preset-item {
+    display: flex;
+    flex-direction: column;
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 1px solid transparent;
+}
+
+.preset-item:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: var(--glass-border);
+}
+
+.preset-item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 6px;
+}
+
+.preset-item-name {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-main);
+}
+
+.preset-item-actions {
+    display: flex;
+    gap: 5px;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.preset-item:hover .preset-item-actions {
+    opacity: 1;
+}
+
+.preset-item-meta {
+    display: flex;
+    gap: 10px;
+    font-size: 0.7rem;
+    color: var(--text-muted);
+}
+
+.preset-item-folder {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.7rem;
+    color: var(--primary-color);
+    margin-top: 4px;
+}
+
+.preset-empty {
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    padding: 30px 0;
+}
+
+/* Save Dialog */
+.save-dialog {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    z-index: 3000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    opacity: 0;
+    transition: opacity 0.2s;
+    pointer-events: none;
+}
+
+.save-dialog.active {
+    opacity: 1;
+    pointer-events: all;
+}
+
+#save-dialog.hidden {
+    display: flex !important;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.save-dialog-content {
+    background: #1a1d26;
+    border: 1px solid var(--glass-border);
+    border-radius: 16px;
+    padding: 25px;
+    width: 90%;
+    max-width: 400px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+.save-dialog-content h3 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text-main);
+    margin: 0 0 20px 0;
+    text-align: center;
+}
+
+.save-form-group {
+    margin-bottom: 15px;
+}
+
+.save-form-group label {
+    display: block;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+}
+
+.save-input,
+.save-select {
+    width: 100%;
+    padding: 12px;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--glass-border);
+    border-radius: 8px;
+    color: #fff;
+    font-size: 0.95rem;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.save-input:focus,
+.save-select:focus {
+    border-color: var(--primary-color);
+}
+
+.save-input::placeholder {
+    color: var(--text-muted);
+}
+
+.save-dialog-buttons {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.save-dialog-buttons button {
+    flex: 1;
+    padding: 12px;
+    font-size: 0.9rem;
+}
+
+/* ==================== RESPONSIVE DESIGN ==================== */
+
+/* Tablet and below */
+@media screen and (max-width: 1024px) {
+    #app {
+        min-width: unset;
+        width: 100%;
+        padding: 15px;
+    }
+
+    .controls-bar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 15px;
+    }
+
+    .control-group {
+        justify-content: space-between;
+        flex-wrap: wrap;
+    }
+
+    .game-header {
+        padding: 0 20px;
+        gap: 15px;
+    }
+
+    .game-lanes {
+        margin: 0 20px;
+    }
+
+    .game-settings-area {
+        flex-wrap: wrap;
+        gap: 15px;
+    }
+}
+
+/* Mobile devices */
+@media screen and (max-width: 768px) {
+    body {
+        overflow-x: hidden;
+        overflow-y: auto;
+    }
+
+    #app {
+        min-width: unset;
+        width: 100%;
+        padding: 10px;
+        height: auto;
+        min-height: 100vh;
+    }
+
+    /* Header */
+    .app-header {
+        flex-direction: column;
+        gap: 10px;
+        margin-bottom: 15px;
+        padding: 0;
+    }
+
+    h1 {
+        font-size: 1.2rem;
+        text-align: center;
+    }
+
+    .header-controls {
+        width: 100%;
+        display: flex;
+        justify-content: center;
+        gap: 10px;
+    }
+
+    #view-toggle-btn,
+    #preset-btn {
+        flex: 1;
+        max-width: 150px;
+        padding: 10px 15px;
+        font-size: 0.85rem;
+    }
+
+    /* Preset Panel - Full screen on mobile */
+    .preset-panel {
+        width: 100%;
+    }
+
+    /* Controls Bar */
+    .controls-bar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+        padding: 15px;
+        margin-bottom: 15px;
+    }
+
+    .control-group {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 6px;
+    }
+
+    .control-group label {
+        text-align: center;
+    }
+
+    .input-row {
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+
+    .number-input {
+        width: 60px;
+        padding: 8px;
+        font-size: 1rem;
+    }
+
+    input[type="range"] {
+        width: 100%;
+        max-width: 200px;
+        height: 8px;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+        width: 24px;
+        height: 24px;
+    }
+
+    .select-input {
+        width: 100%;
+        padding: 10px 12px;
+        font-size: 1rem;
+    }
+
+    /* Play/Stop buttons - larger for touch */
+    .icon-btn {
+        width: 56px;
+        height: 56px;
+    }
+
+    .control-svg {
+        width: 28px;
+        height: 28px;
+    }
+
+    /* First control group (play/stop) should be centered and horizontal */
+    .controls-bar>.control-group:first-child {
+        flex-direction: row;
+        justify-content: center;
+    }
+
+    /* Reset button */
+    .action-btn {
+        width: 100%;
+        padding: 12px 16px !important;
+        font-size: 0.9rem !important;
+    }
+
+    /* Sequencer View */
+    #sequencer-view {
+        overflow-x: auto;
+        overflow-y: visible;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .sequencer-container {
+        padding: 10px;
+        overflow-x: auto;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .sequencer-grid {
+        gap: 20px;
+        padding: 10px;
+    }
+
+    .system-container {
+        gap: 4px;
+        padding: 8px;
+    }
+
+    /* Smaller step buttons on mobile */
+    .step-btn {
+        width: 36px;
+        height: 36px;
+        min-width: 36px;
+        min-height: 36px;
+    }
+
+    .grid-row-label {
+        font-size: 0.7rem;
+        padding-right: 5px;
+    }
+
+    .track-inst-select {
+        width: 80px;
+        font-size: 0.65rem;
+        padding: 2px;
+    }
+
+    .beat-subdiv-ctrl {
+        transform: scale(0.9);
+    }
+
+    /* Game View */
+    #game-view {
+        padding: 15px;
+    }
+
+    .game-header {
+        flex-direction: column;
+        align-items: stretch;
+        padding: 0;
+        gap: 12px;
+    }
+
+    .game-settings-area {
+        flex-direction: column;
+        padding: 12px;
+        gap: 12px;
+    }
+
+    .game-settings-group {
+        min-width: unset;
+        width: 100%;
+    }
+
+    .game-settings-group input[type="range"] {
+        height: 8px;
+    }
+
+    .game-settings-group input[type="range"]::-webkit-slider-thumb {
+        width: 24px;
+        height: 24px;
+    }
+
+    .game-settings-group select {
+        padding: 8px 12px;
+        font-size: 0.9rem;
+    }
+
+    .score-container,
+    .note-counter-container,
+    .combo-container {
+        font-size: 1rem;
+        text-align: center;
+    }
+
+    .game-lanes {
+        margin: 0;
+        min-height: 300px;
+    }
+
+    .game-lane {
+        min-width: 60px;
+    }
+
+    .game-note {
+        height: 10px;
+    }
+
+    .judgment-float {
+        font-size: 1.5rem;
+    }
+
+    .game-footer {
+        margin-top: 15px;
+    }
+
+    .game-hint {
+        font-size: 0.7rem;
+    }
+
+    .countdown-number {
+        font-size: 8rem;
+    }
+
+    /* Context Menu */
+    #context-menu {
+        max-width: 90vw;
+        font-size: 0.85rem;
+    }
+
+    .menu-item {
+        padding: 12px 16px;
+    }
+}
+
+/* Small mobile devices */
+@media screen and (max-width: 480px) {
+    #app {
+        padding: 8px;
+    }
+
+    h1 {
+        font-size: 1rem;
+    }
+
+    .controls-bar {
+        padding: 12px;
+        gap: 10px;
+    }
+
+    .icon-btn {
+        width: 50px;
+        height: 50px;
+    }
+
+    .control-svg {
+        width: 24px;
+        height: 24px;
+    }
+
+    .step-btn {
+        width: 30px;
+        height: 30px;
+        min-width: 30px;
+        min-height: 30px;
+    }
+
+    .track-inst-select {
+        width: 70px;
+        font-size: 0.6rem;
+    }
+
+    .grid-row-label {
+        font-size: 0.6rem;
+    }
+
+    .game-lanes {
+        min-height: 250px;
+    }
+
+    .game-lane {
+        min-width: 50px;
+    }
+
+    .countdown-number {
+        font-size: 6rem;
+    }
+
+    .judgment-float {
+        font-size: 1.2rem;
+    }
+}
+
+/* Landscape mode on mobile */
+@media screen and (max-height: 500px) and (orientation: landscape) {
+    #app {
+        height: auto;
+        min-height: 100vh;
+    }
+
+    .app-header {
+        margin-bottom: 10px;
+    }
+
+    h1 {
+        font-size: 1rem;
+    }
+
+    .controls-bar {
+        flex-direction: row;
+        flex-wrap: wrap;
+        padding: 10px;
+        gap: 10px;
+    }
+
+    .control-group {
+        flex-direction: row;
+        align-items: center;
+        gap: 5px;
+    }
+
+    .icon-btn {
+        width: 40px;
+        height: 40px;
+    }
+
+    .control-svg {
+        width: 20px;
+        height: 20px;
+    }
+
+    .step-btn {
+        width: 32px;
+        height: 32px;
+    }
+
+    /* Game view landscape */
+    #game-view {
+        padding: 10px;
+    }
+
+    .game-header {
+        flex-direction: row;
+        flex-wrap: wrap;
+        padding: 0;
+        gap: 10px;
+    }
+
+    .game-settings-area {
+        flex-direction: row;
+        padding: 8px;
+        gap: 10px;
+    }
+
+    .game-settings-group {
+        min-width: 100px;
+    }
+
+    .game-lanes {
+        min-height: 200px;
+    }
+
+    .countdown-number {
+        font-size: 5rem;
     }
 }
