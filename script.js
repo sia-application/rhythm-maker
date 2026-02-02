@@ -2284,7 +2284,7 @@ class UI {
 
                 // Value Display
                 const display = document.createElement('span');
-                display.innerText = beat.subdivision;
+                display.innerText = `1/${beat.subdivision}`;
                 display.className = 'subdiv-val';
 
                 // Plus Btn
