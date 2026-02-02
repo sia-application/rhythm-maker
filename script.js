@@ -1160,7 +1160,7 @@ class RhythmGame {
         this.activeNotes = []; // { el, time, lane, judged, timeoutID }
         this.laneMap = {}; // trackIndex -> laneIndex
         this.isGameMode = false;
-        this.hitCriteria = 'nice'; // 'nice', 'great', or 'excellent'
+        this.hitCriteria = 'great'; // 'nice', 'great', or 'excellent'
         this.lastNoteTime = 0;
     }
 
@@ -1624,7 +1624,7 @@ class UI {
         `;
         this.configHitCriteriaSelect.innerHTML = `
             <option value="nice">EXCELLENT+GREAT+NICE</option>
-            <option value="great">EXCELLENT+GREAT</option>
+            <option value="great" selected>EXCELLENT+GREAT</option>
             <option value="excellent">EXCELLENT ONLY</option>
         `;
 
