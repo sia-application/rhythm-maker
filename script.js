@@ -1591,6 +1591,10 @@ class UI {
         this.saveConfirmBtn = document.getElementById('save-confirm-btn');
         this.selectedFolderId = null; // Currently selected folder filter
 
+        // Current Preset Info
+        this.currentProjectDisplay = document.getElementById('current-project-name');
+        this.currentPresetDisplay = document.getElementById('current-preset-name');
+
         this.setupListeners();
         this.setupContextMenu();
         this.setupPresetListeners();
@@ -2539,6 +2543,7 @@ class UI {
         // Folder input - Enter key to create
         this.folderNameInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
+                if (e.isComposing) return; // Add this line to handle IME
                 e.preventDefault();
                 this.createNewFolder();
             } else if (e.key === 'Escape') {
@@ -2647,6 +2652,22 @@ class UI {
         this.presetManager.savePreset(name, folderId, data);
         this.closeSaveDialog();
         this.renderPresetList();
+        this.updateCurrentInfo(name, folderId);
+    }
+
+    updateCurrentInfo(presetName, folderId) {
+        if (this.currentPresetDisplay) {
+            this.currentPresetDisplay.textContent = presetName || 'None';
+        }
+        if (this.currentProjectDisplay) {
+            if (folderId) {
+                const folders = this.presetManager.getFolders();
+                const folder = folders.find(f => f.id === folderId);
+                this.currentProjectDisplay.textContent = folder ? folder.name : 'None';
+            } else {
+                this.currentProjectDisplay.textContent = 'None';
+            }
+        }
     }
 
     createNewFolder() {
@@ -2723,6 +2744,10 @@ class UI {
                 if (newName && newName.trim()) {
                     this.presetManager.renameFolder(folder.id, newName.trim());
                     this.renderFolderList();
+                    // If the renamed folder is the current project, update the display
+                    if (this.currentProjectDisplay.textContent === folder.name) {
+                        this.currentProjectDisplay.textContent = newName.trim();
+                    }
                 }
             };
             renameBtn.addEventListener('click', handleRename);
@@ -2845,6 +2870,9 @@ class UI {
 
         // Close panel
         this.closePresetPanel();
+
+        // Update current info display
+        this.updateCurrentInfo(preset.name, preset.folderId);
 
         console.log(`Loaded preset: ${preset.name}`);
     }

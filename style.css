@@ -80,6 +80,44 @@ h1 {
     flex-wrap: wrap;
     gap: 20px;
     margin-bottom: 20px;
+    position: relative;
+    /* Add this for centering info */
+}
+
+.current-preset-info {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 16px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    /* More rounded pill shape */
+    font-size: 0.85rem;
+    font-weight: 600;
+    pointer-events: none;
+    /* Let clicks pass through if needed */
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.current-preset-info .info-label {
+    color: var(--text-muted);
+    font-size: 0.7rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+.current-preset-info .info-value {
+    color: var(--primary-color);
+    text-shadow: 0 0 8px var(--primary-glow);
+}
+
+.current-preset-info .info-sep {
+    color: rgba(255, 255, 255, 0.2);
+    margin: 0 4px;
 }
 
 .control-group {

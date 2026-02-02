@@ -46,7 +46,7 @@ seq.addBar(); // Bar 0
 seq.addBar(); // Bar 1
 seq.addBar(); // Bar 2
 
-console.log("Initial State:");
+console.log("None (Initial State):");
 console.log("Bar 0 Beat 0 Subdiv:", seq.bars[0].beats[0].subdivision);
 console.log("Bar 1 Beat 0 Subdiv:", seq.bars[1].beats[0].subdivision);
 console.log("Bar 2 Beat 0 Subdiv:", seq.bars[2].beats[0].subdivision);
