@@ -1714,7 +1714,7 @@ class UI {
         this.viewToggleBtn.addEventListener('click', () => {
             console.log("UI: View Toggle Clicked. Current isGameMode:", this.isGameMode);
             this.isGameMode = !this.isGameMode;
-            this.viewToggleBtn.innerText = this.isGameMode ? "Sequencer Mode" : "Game Mode";
+            this.viewToggleBtn.innerText = this.isGameMode ? "Make Mode" : "Game Mode";
             this.sequencerView.classList.toggle('hidden', this.isGameMode);
             this.gameView.classList.toggle('hidden', !this.isGameMode);
             this.game.isGameMode = this.isGameMode;
@@ -1724,7 +1724,7 @@ class UI {
                 this.game.init();
                 this.seq.onNoteTrigger = (bar, track, targetTime) => this.game.spawnNote(track, targetTime);
             } else {
-                console.log("UI: Switching to Sequencer Mode");
+                console.log("UI: Switching to Make Mode");
                 this.seq.onNoteTrigger = null;
             }
         });
