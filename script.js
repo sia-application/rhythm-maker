@@ -762,37 +762,44 @@ class Sequencer {
     play() {
         if (!this.audio.isInitialized) this.audio.init();
 
-        const now = this.audio.ctx.currentTime;
-
         if (this.isPlaying) {
             // PAUSE
+            console.log("UI: Pause requested");
             this.isPlaying = false;
+            this.isEndOfProject = false; // Ensure we don't accidentally treat this as "finished"
             clearTimeout(this.timerID);
             this.clearScheduledTimeouts();
+
+            // Fade out audio smoothly
             this.audio.stopAll();
-            ui.clearHighlights();
-            if (ui.game) {
-                ui.game.clearActiveNotes();
+
+            if (typeof ui !== 'undefined' && ui) {
+                ui.clearHighlights();
+                if (ui.game) ui.game.clearActiveNotes();
+                ui.updatePlayButton(false);
             }
-            ui.updatePlayButton(false);
         } else {
-            // PLAY (or RESUME)
-            // Use playing indices to resume from where the user last heard sound
+            // PLAY or RESUME
+            console.log("UI: Play/Resume requested. isEndOfProject:", this.isEndOfProject);
+
+            // If we finished a song, reset to beginning first
+            if (this.isEndOfProject) {
+                this.stop();
+            }
+
+            // Resume from last heard position
             this.currentBarIndex = this.playingBarIndex;
             this.currentBeatIndex = this.playingBeatIndex;
             this.currentStepInBeat = this.playingStepInBeat;
-            this.isEndOfProject = false; // Reset flag to allow scheduling
+            this.isEndOfProject = false;
 
-            if (typeof ui !== 'undefined' && ui.isGameMode) {
-                // Determine countdown duration (4 beats: 3, 2, 1, GO -> Music starts @ 5th beat)
+            if (typeof ui !== 'undefined' && ui && ui.isGameMode) {
                 const countdownDuration = (60 / this.bpm) * 4;
-                const startTime = this.audio.ctx.currentTime + 0.1; // 100ms buffer
+                const startTime = this.audio.ctx.currentTime + 0.1;
 
-                // Only reset stats if starting from the beginning
                 if (this.currentBarIndex === 0 && this.currentBeatIndex === 0 && this.currentStepInBeat === 0) {
                     ui.game.resetStats();
                 }
-
                 this.startPlayback(countdownDuration, startTime);
                 ui.startCountdown(this.bpm, startTime);
             } else {
@@ -857,16 +864,18 @@ class Sequencer {
 
     stop() {
         this.isPlaying = false;
+        this.isEndOfProject = false;
         clearTimeout(this.timerID);
         this.clearScheduledTimeouts();
         this.audio.stopAll();
+
         if (typeof ui !== 'undefined' && ui) {
             ui.clearHighlights();
-            if (ui.game) {
-                ui.game.clearActiveNotes();
-            }
+            if (ui.game) ui.game.clearActiveNotes();
             ui.updatePlayButton(false);
         }
+
+        // Hard reset all indices
         this.currentBarIndex = 0;
         this.currentBeatIndex = 0;
         this.currentStepInBeat = 0;
