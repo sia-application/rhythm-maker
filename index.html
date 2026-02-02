@@ -96,20 +96,20 @@
                 <button id="preset-panel-close" class="preset-close-btn">✕</button>
             </div>
             <div class="preset-actions">
-                <button id="save-new-btn" class="btn-primary">💾 現在のパターンを保存</button>
+                <button id="save-new-btn" class="btn-primary">💾 Save The Rhythm </button>
             </div>
             <div class="preset-folders">
-                <h3>📁 フォルダ</h3>
+                <h3>📁 Project</h3>
                 <div id="folder-form" class="folder-form hidden">
-                    <input type="text" id="folder-name-input" placeholder="フォルダ名" class="folder-input">
-                    <button id="folder-create-btn" class="btn-primary folder-create-btn">作成</button>
+                    <input type="text" id="folder-name-input" placeholder="Project Name" class="folder-input">
+                    <button id="folder-create-btn" class="btn-primary folder-create-btn">Create</button>
                     <button id="folder-cancel-btn" class="folder-cancel-btn">✕</button>
                 </div>
-                <button id="add-folder-btn" class="btn-secondary folder-add-btn">+ 新規フォルダ</button>
+                <button id="add-folder-btn" class="btn-secondary folder-add-btn">+ New Project</button>
                 <div id="folder-list" class="folder-list"></div>
             </div>
             <div class="preset-list-section">
-                <h3>🎵 プリセット一覧</h3>
+                <h3>🎵 Preset List</h3>
                 <div id="preset-list" class="preset-list"></div>
             </div>
         </div>
@@ -118,20 +118,20 @@
         <!-- Save Dialog -->
         <div id="save-dialog" class="save-dialog hidden">
             <div class="save-dialog-content">
-                <h3>プリセットを保存</h3>
+                <h3>Save The Preset</h3>
                 <div class="save-form-group">
-                    <label for="preset-name-input">名前</label>
-                    <input type="text" id="preset-name-input" placeholder="プリセット名を入力" class="save-input">
+                    <label for="preset-name-input">Preset Name</label>
+                    <input type="text" id="preset-name-input" placeholder="Enter Preset Name" class="save-input">
                 </div>
                 <div class="save-form-group">
-                    <label for="preset-folder-select">フォルダ</label>
+                    <label for="preset-folder-select">Project</label>
                     <select id="preset-folder-select" class="save-select">
-                        <option value="">ルート（フォルダなし）</option>
+                        <option value="">Root（No Project）</option>
                     </select>
                 </div>
                 <div class="save-dialog-buttons">
-                    <button id="save-cancel-btn" class="btn-secondary">キャンセル</button>
-                    <button id="save-confirm-btn" class="btn-primary">保存</button>
+                    <button id="save-cancel-btn" class="btn-secondary">Cancel</button>
+                    <button id="save-confirm-btn" class="btn-primary">Save</button>
                 </div>
             </div>
         </div>

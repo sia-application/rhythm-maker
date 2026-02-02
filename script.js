@@ -1828,14 +1828,12 @@ class UI {
 
         // Notes Reset
         addTapListener(this.configResetBtn, () => {
-            if (confirm('全てのノートをリセットしますか？')) {
-                this.seq.bars.forEach(bar => {
-                    bar.tracks.forEach(track => {
-                        track.pattern.forEach(beat => beat.fill(false));
-                    });
+            this.seq.bars.forEach(bar => {
+                bar.tracks.forEach(track => {
+                    track.pattern.forEach(beat => beat.fill(false));
                 });
-                this.renderGrid();
-            }
+            });
+            this.renderGrid();
         });
 
         // Game Speed
@@ -2619,7 +2617,7 @@ class UI {
 
     updateFolderSelect() {
         const folders = this.presetManager.getFolders();
-        this.presetFolderSelect.innerHTML = '<option value="">ルート（フォルダなし）</option>';
+        this.presetFolderSelect.innerHTML = '<option value="">Root（No Project）</option>';
         folders.forEach(folder => {
             const option = document.createElement('option');
             option.value = folder.id;
@@ -2631,7 +2629,7 @@ class UI {
     confirmSavePreset() {
         const name = this.presetNameInput.value.trim();
         if (!name) {
-            alert('プリセット名を入力してください');
+            alert('Please enter a preset name');
             return;
         }
 
@@ -2662,7 +2660,7 @@ class UI {
         const allItem = document.createElement('div');
         allItem.className = 'folder-item' + (this.selectedFolderId === null ? ' active' : '');
         allItem.innerHTML = `
-            <span class="folder-item-name">📂 すべて</span>
+            <span class="folder-item-name">📂 All</span>
         `;
         const selectAll = () => {
             this.selectedFolderId = null;
@@ -2672,6 +2670,21 @@ class UI {
         allItem.addEventListener('click', selectAll);
         allItem.addEventListener('touchend', (e) => { e.preventDefault(); selectAll(); });
         this.folderList.appendChild(allItem);
+
+        // Root (No Project) Item
+        const rootItem = document.createElement('div');
+        rootItem.className = 'folder-item' + (this.selectedFolderId === 'root' ? ' active' : '');
+        rootItem.innerHTML = `
+            <span class="folder-item-name">📁 Root (No Project)</span>
+        `;
+        const selectRoot = () => {
+            this.selectedFolderId = 'root';
+            this.renderFolderList();
+            this.renderPresetList();
+        };
+        rootItem.addEventListener('click', selectRoot);
+        rootItem.addEventListener('touchend', (e) => { e.preventDefault(); selectRoot(); });
+        this.folderList.appendChild(rootItem);
 
         folders.forEach(folder => {
             const item = document.createElement('div');
@@ -2698,7 +2711,7 @@ class UI {
             const renameBtn = item.querySelector('.rename');
             const handleRename = (e) => {
                 e.stopPropagation();
-                const newName = prompt('新しいフォルダ名:', folder.name);
+                const newName = prompt('New Project Name:', folder.name);
                 if (newName && newName.trim()) {
                     this.presetManager.renameFolder(folder.id, newName.trim());
                     this.renderFolderList();
@@ -2711,7 +2724,7 @@ class UI {
             const deleteBtn = item.querySelector('.delete');
             const handleDelete = (e) => {
                 e.stopPropagation();
-                if (confirm(`フォルダ「${folder.name}」を削除しますか？\n（中のプリセットはルートに移動されます）`)) {
+                if (confirm(`Delete Project「${folder.name}」?\n（Presets in this project will be moved to the root）`)) {
                     this.presetManager.deleteFolder(folder.id);
                     if (this.selectedFolderId === folder.id) {
                         this.selectedFolderId = null;
@@ -2732,14 +2745,19 @@ class UI {
         const folders = this.presetManager.getFolders();
 
         // Filter by selected folder
-        const presets = this.selectedFolderId === null
-            ? allPresets
-            : allPresets.filter(p => p.folderId === this.selectedFolderId);
+        let presets;
+        if (this.selectedFolderId === null) {
+            presets = allPresets;
+        } else if (this.selectedFolderId === 'root') {
+            presets = allPresets.filter(p => !p.folderId);
+        } else {
+            presets = allPresets.filter(p => p.folderId === this.selectedFolderId);
+        }
 
         this.presetList.innerHTML = '';
 
         if (presets.length === 0) {
-            this.presetList.innerHTML = '<div class="preset-empty">プリセットがありません</div>';
+            this.presetList.innerHTML = '<div class="preset-empty">No Presets</div>';
             return;
         }
 
@@ -2774,7 +2792,7 @@ class UI {
             const renameBtn = item.querySelector('.rename');
             const handleRename = (e) => {
                 e.stopPropagation();
-                const newName = prompt('新しいプリセット名:', preset.name);
+                const newName = prompt('New Preset Name:', preset.name);
                 if (newName && newName.trim()) {
                     this.presetManager.renamePreset(preset.id, newName.trim());
                     this.renderPresetList();
@@ -2787,7 +2805,7 @@ class UI {
             const deleteBtn = item.querySelector('.delete');
             const handleDelete = (e) => {
                 e.stopPropagation();
-                if (confirm(`プリセット「${preset.name}」を削除しますか？`)) {
+                if (confirm(`Delete preset "${preset.name}"?`)) {
                     this.presetManager.deletePreset(preset.id);
                     this.renderPresetList();
                 }
