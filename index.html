@@ -190,30 +190,35 @@
     </div>
 
     <div id="context-menu" class="hidden">
-        <div class="menu-item" id="ctx-sel-step">指定のステップ◯を選択</div>
-        <div class="menu-item" id="ctx-sel-col">列全体のステップ◯を選択</div>
-        <div class="menu-item" id="ctx-sel-all">Bar全体のステップ◯を選択</div>
-        <div class="menu-item" id="ctx-sel-global">プロジェクト全体のステップ◯を選択</div>
+        <div class="menu-item disabled"><strong>SELECT</strong></div>
+        <div class="menu-item" id="ctx-sel-step">Step</div>
+        <div class="menu-item" id="ctx-sel-col">Column</div>
+        <div class="menu-item" id="ctx-sel-all">Bar</div>
+        <div class="menu-item" id="ctx-sel-global">Global</div>
         <hr class="menu-sep">
-        <div class="menu-item" id="ctx-sel-nogame-step">指定のステップ◯を選択(No Game)</div>
-        <div class="menu-item" id="ctx-sel-nogame-col">列全体のステップ◯を選択(No Game)</div>
-        <div class="menu-item" id="ctx-sel-nogame-bar">Bar全体のステップ◯を選択(No Game)</div>
-        <div class="menu-item" id="ctx-sel-nogame-global">プロジェクト全体のステップ◯を選択(No Game)</div>
+        <div class="menu-item disabled"><strong>SELECT(Doesn't reflect in the game)</strong></div>
+        <div class="menu-item" id="ctx-sel-nogame-step">Step</div>
+        <div class="menu-item" id="ctx-sel-nogame-col">Column</div>
+        <div class="menu-item" id="ctx-sel-nogame-bar">Bar</div>
+        <div class="menu-item" id="ctx-sel-nogame-global">Global</div>
         <hr class="menu-sep">
-        <div class="menu-item" id="ctx-unsel-step">指定のステップ◯を選択解除</div>
-        <div class="menu-item" id="ctx-unsel-col">列全体のステップ◯を選択解除</div>
-        <div class="menu-item" id="ctx-unsel-all">Bar全体のステップ◯を選択解除</div>
-        <div class="menu-item" id="ctx-unsel-global">プロジェクト全体のステップ◯を選択解除</div>
+        <div class="menu-item disabled"><strong>UNSELECT</strong></div>
+        <div class="menu-item" id="ctx-unsel-step">Step</div>
+        <div class="menu-item" id="ctx-unsel-col">Column</div>
+        <div class="menu-item" id="ctx-unsel-all">Bar</div>
+        <div class="menu-item" id="ctx-unsel-global">Global</div>
         <hr class="menu-sep">
-        <div class="menu-item" id="ctx-add-step">指定のステップ◯の右隣にステップを追加</div>
-        <div class="menu-item" id="ctx-add-step-all">列全体にステップ◯の右隣に追加</div>
-        <div class="menu-item" id="ctx-add-step-bar">Bar全体のステップ◯の右隣にステップを追加</div>
-        <div class="menu-item" id="ctx-add-step-global">プロジェクト全体のSTEPの右隣にステップを追加</div>
+        <div class="menu-item disabled"><strong>ADD STEP</strong></div>
+        <div class="menu-item" id="ctx-add-step">Right (Step)</div>
+        <div class="menu-item" id="ctx-add-step-all">Right (Column)</div>
+        <div class="menu-item" id="ctx-add-step-bar">Right (Bar)</div>
+        <div class="menu-item" id="ctx-add-step-global">Right (Global)</div>
         <hr class="menu-sep">
-        <div class="menu-item" id="ctx-del-step">指定したステップを削除</div>
-        <div class="menu-item" id="ctx-del-step-all">列全体のステップ◯を全て削除</div>
-        <div class="menu-item" id="ctx-del-step-bar">Bar◯全体のステップ◯を全て削除</div>
-        <div class="menu-item" id="ctx-del-step-global">プロジェクト全体のSTEP◯を削除</div>
+        <div class="menu-item disabled"><strong>DELETE STEP</strong></div>
+        <div class="menu-item" id="ctx-del-step">Current</div>
+        <div class="menu-item" id="ctx-del-step-all">Column</div>
+        <div class="menu-item" id="ctx-del-step-bar">Bar</div>
+        <div class="menu-item" id="ctx-del-step-global">Global</div>
     </div>
     <script src="script.js"></script>
 </body>

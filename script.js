@@ -1870,13 +1870,13 @@ class UI {
 
                 this.ctxDelBtn.classList.remove('disabled');
                 this.ctxDelBtn.innerText = `指定のステップ${stepIndex + 1}を削除`;
-                this.ctxAddBtn.innerText = `指定のステップ${stepIndex + 1}の右隣にステップを追加`;
-                this.ctxAddBarBtn.innerText = `Bar${barIndex + 1}全体のステップ${stepIndex + 1}の右隣にステップを追加`;
+                this.ctxAddBtn.innerText = `指定のステップ${stepIndex + 1}の右にステップを追加`;
+                this.ctxAddBarBtn.innerText = `Bar${barIndex + 1}全体のステップ${stepIndex + 1}の右にステップを追加`;
                 this.ctxDelBarBtn.innerText = `Bar${barIndex + 1}全体のステップ${stepIndex + 1}を削除`;
                 this.ctxDelAllBtn.innerText = `列全体のステップ${stepIndex + 1}を削除`;
                 this.ctxDelGlobalBtn.innerText = `プロジェクト全体のSTEP${stepIndex + 1}を削除`;
-                this.ctxAddGlobalBtn.innerText = `プロジェクト全体のSTEP${stepIndex + 1}の右隣にステップを追加`;
-                this.ctxAddAllBtn.innerText = `列全体のSTEP${stepIndex + 1}の右隣にステップを追加`;
+                this.ctxAddGlobalBtn.innerText = `プロジェクト全体のSTEP${stepIndex + 1}の右にステップを追加`;
+                this.ctxAddAllBtn.innerText = `列全体のSTEP${stepIndex + 1}の右にステップを追加`;
 
                 this.ctxSelStepBtn.innerText = `指定のステップ${stepIndex + 1}を選択`;
                 this.ctxSelColBtn.innerText = `列全体のステップ${stepIndex + 1}を選択`;
@@ -1887,10 +1887,10 @@ class UI {
                 this.ctxUnselGlobalStepBtn.innerText = `プロジェクト全体のステップ${stepIndex + 1}を選択解除`;
                 this.ctxSelGlobalStepBtn.innerText = `プロジェクト全体のステップ${stepIndex + 1}を選択`;
 
-                this.ctxSelNogameStepBtn.innerText = `指定のステップ${stepIndex + 1}を選択(No Game)`;
-                this.ctxSelNogameColBtn.innerText = `列全体のステップ${stepIndex + 1}を選択(No Game)`;
-                this.ctxSelNogameBarBtn.innerText = `Bar${barIndex + 1}全体のステップ${stepIndex + 1}を選択(No Game)`;
-                this.ctxSelNogameGlobalBtn.innerText = `プロジェクト全体のステップ${stepIndex + 1}を選択(No Game)`;
+                this.ctxSelNogameStepBtn.innerText = `指定のステップ${stepIndex + 1}を選択`;
+                this.ctxSelNogameColBtn.innerText = `列全体のステップ${stepIndex + 1}を選択`;
+                this.ctxSelNogameBarBtn.innerText = `Bar${barIndex + 1}全体のステップ${stepIndex + 1}を選択`;
+                this.ctxSelNogameGlobalBtn.innerText = `プロジェクト全体のステップ${stepIndex + 1}を選択`;
 
                 this.ctxDelAllBtn.classList.remove('disabled');
                 this.ctxDelBarBtn.classList.remove('disabled');
@@ -1919,13 +1919,13 @@ class UI {
                 trackIndex = -1;
                 this.ctxDelBtn.classList.add('disabled');
                 this.ctxDelBtn.innerText = "選択箇所を削除";
-                this.ctxAddBtn.innerText = "指定のステップの右隣に追加";
-                this.ctxAddBarBtn.innerText = `Bar${barIndex + 1}全体のステップの右隣にステップを追加`;
+                this.ctxAddBtn.innerText = "指定のステップの右に追加";
+                this.ctxAddBarBtn.innerText = `Bar${barIndex + 1}全体のステップの右にステップを追加`;
                 this.ctxDelBarBtn.innerText = `Bar${barIndex + 1}全体のステップを削除`;
                 this.ctxDelAllBtn.innerText = "列全体の指定ステップを削除";
                 this.ctxDelGlobalBtn.innerText = "全ての拍の同位置を削除";
                 this.ctxAddGlobalBtn.innerText = "全ての拍の末尾にステップを追加";
-                this.ctxAddAllBtn.innerText = "列全体にステップを右隣に追加";
+                this.ctxAddAllBtn.innerText = "列全体にステップを右に追加";
 
                 this.ctxSelStepBtn.innerText = "指定のステップを選択";
                 this.ctxSelColBtn.innerText = "列全体のステップを選択";
@@ -1936,10 +1936,10 @@ class UI {
                 this.ctxSelGlobalStepBtn.innerText = "プロジェクト全体のステップを選択";
                 this.ctxUnselGlobalStepBtn.innerText = "プロジェクト全体のステップを選択解除";
 
-                this.ctxSelNogameStepBtn.innerText = "指定のステップを選択(No Game)";
-                this.ctxSelNogameColBtn.innerText = "列全体のステップを選択(No Game)";
-                this.ctxSelNogameBarBtn.innerText = "Bar全体のステップを選択(No Game)";
-                this.ctxSelNogameGlobalBtn.innerText = "プロジェクト全体のステップを選択(No Game)";
+                this.ctxSelNogameStepBtn.innerText = "指定のステップを選択";
+                this.ctxSelNogameColBtn.innerText = "列全体のステップを選択";
+                this.ctxSelNogameBarBtn.innerText = "Bar全体のステップを選択";
+                this.ctxSelNogameGlobalBtn.innerText = "プロジェクト全体のステップを選択";
 
                 this.ctxDelAllBtn.classList.add('disabled');
                 this.ctxDelBarBtn.classList.add('disabled');
