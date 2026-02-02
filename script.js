@@ -1160,15 +1160,34 @@ class RhythmGame {
             flash.className = 'lane-hit-flash';
             lane.appendChild(flash);
 
-            lane.addEventListener('mousedown', (e) => {
-                e.preventDefault();
-                this.handleInput(i);
-            });
-
             this.container.appendChild(lane);
             this.lanes.push({ el: lane, flash: flash });
             this.laneMap[i] = i;
         });
+
+        // Robust multi-touch handling on the container
+        const handleTouch = (e) => {
+            e.preventDefault();
+            // Process ALL touches that started/moved/ended in this frame
+            for (let i = 0; i < e.changedTouches.length; i++) {
+                const touch = e.changedTouches[i];
+                // Find lane under touch
+                const element = document.elementFromPoint(touch.clientX, touch.clientY);
+                const laneEl = element?.closest('.game-lane');
+                const laneIdx = laneEl ? parseInt(laneEl.dataset.laneIndex) : -1;
+                this.handleInput(laneIdx, e.timeStamp);
+            }
+        };
+
+        const handleMouse = (e) => {
+            e.preventDefault();
+            const laneEl = e.target.closest('.game-lane');
+            const laneIdx = laneEl ? parseInt(laneEl.dataset.laneIndex) : -1;
+            this.handleInput(laneIdx, performance.now());
+        };
+
+        this.container.addEventListener('touchstart', handleTouch, { passive: false });
+        this.container.addEventListener('mousedown', handleMouse);
 
         console.log(`RhythmGame: Created ${this.lanes.length} lanes`);
 
@@ -1197,6 +1216,8 @@ class RhythmGame {
         if (laneIndex === undefined) return;
 
         const lane = this.lanes[laneIndex];
+        if (!lane) return;
+
         const note = document.createElement('div');
         note.className = 'game-note';
         lane.el.appendChild(note);
@@ -1256,34 +1277,70 @@ class RhythmGame {
         }, animationDuration + 100);
     }
 
-    handleInput(laneIndex = -1) {
+    handleInput(laneIndex = -1, inputTime = null) {
         if (!this.isGameMode) return;
 
-        const now = performance.now();
-        let targetNote = null;
-        let minDiff = Infinity;
-
-        this.activeNotes.forEach(note => {
-            if (note.judged) return;
-            if (laneIndex !== -1 && note.lane !== laneIndex) return;
-
-            const diff = Math.abs(now - note.targetTime);
-            if (diff < minDiff) {
-                minDiff = diff;
-                targetNote = note;
-            }
-        });
-
-        // Use a wider window for finding notes (e.g. 350ms)
-        if (targetNote && minDiff < 350) {
-            this.judgeNote(targetNote, minDiff);
-        }
+        const now = inputTime || performance.now();
 
         if (laneIndex !== -1) {
+            // Specific lane hit
+            let targetNote = null;
+            let minDiff = Infinity;
+
+            this.activeNotes.forEach(note => {
+                if (note.judged || note.lane !== laneIndex) return;
+                const diff = Math.abs(now - note.targetTime);
+                if (diff < minDiff) {
+                    minDiff = diff;
+                    targetNote = note;
+                }
+            });
+
+            if (targetNote && minDiff < 350) {
+                this.judgeNote(targetNote, minDiff);
+            }
+
+            // Flash this lane
             const flash = this.lanes[laneIndex].flash;
             flash.classList.add('active');
             setTimeout(() => flash.classList.remove('active'), 100);
         } else {
+            // Global hit (Space or generic tap)
+            // Can hit multiple notes in different lanes if they are within time window
+            let notesHit = 0;
+            const handledLanes = new Set();
+
+            // First, prioritize notes very close to the timing (chords)
+            this.activeNotes.forEach(note => {
+                if (note.judged) return;
+                const diff = Math.abs(now - note.targetTime);
+                if (diff < 150) { // Tight window for direct chord hits
+                    if (!handledLanes.has(note.lane)) {
+                        this.judgeNote(note, diff);
+                        handledLanes.add(note.lane);
+                        notesHit++;
+                    }
+                }
+            });
+
+            // If no notes hit in tight window, find the single closest one in wider window
+            if (notesHit === 0) {
+                let targetNote = null;
+                let minDiff = Infinity;
+                this.activeNotes.forEach(note => {
+                    if (note.judged) return;
+                    const diff = Math.abs(now - note.targetTime);
+                    if (diff < minDiff) {
+                        minDiff = diff;
+                        targetNote = note;
+                    }
+                });
+                if (targetNote && minDiff < 350) {
+                    this.judgeNote(targetNote, minDiff);
+                }
+            }
+
+            // Flash all lanes
             this.lanes.forEach(l => {
                 l.flash.classList.add('active');
                 setTimeout(() => l.flash.classList.remove('active'), 100);
@@ -1639,7 +1696,7 @@ class UI {
         window.addEventListener('keydown', (e) => {
             if (this.isGameMode && e.code === 'Space') {
                 e.preventDefault();
-                this.game.handleInput();
+                this.game.handleInput(-1, e.timeStamp);
             }
         });
 
