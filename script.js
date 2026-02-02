@@ -1396,13 +1396,11 @@ class RhythmGame {
             rating = 'EXCELLENT';
             scoreAdd = 100;
             ratingClass = 'note-excellent';
-            this.combo++;
             isHit = true;
         } else if (diff <= 100) {
             rating = 'GREAT';
             scoreAdd = 50;
             ratingClass = 'note-great';
-            this.combo++;
             if (this.hitCriteria === 'nice' || this.hitCriteria === 'great') {
                 isHit = true;
             }
@@ -1410,21 +1408,22 @@ class RhythmGame {
             rating = 'NICE';
             scoreAdd = 20;
             ratingClass = 'note-nice';
-            this.combo++;
             if (this.hitCriteria === 'nice') {
                 isHit = true;
             }
         } else {
             rating = 'MISS';
-            this.combo = 0;
             ratingClass = 'note-miss';
         }
 
         if (isHit) {
             this.hitCount++;
+            this.combo++;
             if (this.totalNotes > 0 && this.hitCount > this.totalNotes) {
                 this.hitCount = 0; // Reset to 0 as requested by user
             }
+        } else {
+            this.combo = 0;
         }
 
         this.score += scoreAdd;
