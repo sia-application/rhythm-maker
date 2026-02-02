@@ -17,7 +17,7 @@
 <body>
     <div id="app">
         <header class="app-header">
-            <h1>RHYTHM MAKER PRO</h1>
+            <h1 onclick="location.reload()" style="cursor: pointer;">RHYTHM MAKER PRO</h1>
             <div class="header-controls">
                 <button id="view-toggle-btn" class="btn-secondary">Game Mode</button>
                 <button id="preset-btn" class="btn-secondary">Preset</button>
@@ -144,11 +144,10 @@
                             <rect x="6" y="6" width="12" height="12" fill="currentColor" />
                         </svg>
                     </button>
-                </div>
 
-                <div class="control-group">
-                    <label for="bpm-input">BPM</label>
-                    <div class="input-row">
+                    <div class="input-row" style="margin-left: 10px;">
+                        <span
+                            style="font-size: 0.8rem; color: var(--text-muted); font-weight: 600; margin-right: 5px;">BPM</span>
                         <input type="number" id="bpm-number" min="20" max="999" value="120" class="number-input">
                         <input type="range" id="bpm-input" min="20" max="999" value="120">
                     </div>
