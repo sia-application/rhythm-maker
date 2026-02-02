@@ -777,6 +777,10 @@ class Sequencer {
                 if (ui.game) ui.game.clearActiveNotes();
                 ui.updatePlayButton(false);
             }
+
+            // RESTORE VOLUME for ad-hoc clicks
+            const targetVol = (typeof ui !== 'undefined' && ui && ui.configMasterVol) ? parseFloat(ui.configMasterVol.value) : 0.5;
+            this.audio.masterGain.gain.setTargetAtTime(targetVol, this.audio.ctx.currentTime + 0.05, 0.02);
         } else {
             // PLAY or RESUME
 
@@ -882,6 +886,10 @@ class Sequencer {
             if (ui.game) ui.game.clearActiveNotes();
             ui.updatePlayButton(false);
         }
+
+        // RESTORE VOLUME for ad-hoc clicks
+        const targetVol = (typeof ui !== 'undefined' && ui && ui.configMasterVol) ? parseFloat(ui.configMasterVol.value) : 0.5;
+        this.audio.masterGain.gain.setTargetAtTime(targetVol, this.audio.ctx.currentTime + 0.05, 0.02);
 
         // Hard reset all indices
         this.currentBarIndex = 0;
@@ -1553,6 +1561,7 @@ class UI {
         this.configTimeSigSelect = document.getElementById('config-time-sig-select');
         this.configSubdivSelect = document.getElementById('config-subdiv-select');
         this.configPlaybackModeSelect = document.getElementById('config-playback-mode-select');
+        this.configStepSoundSelect = document.getElementById('config-step-sound-select');
         this.configHitCriteriaSelect = document.getElementById('config-hit-criteria-select');
 
         // Config Buttons
@@ -1565,6 +1574,7 @@ class UI {
 
         this.game = new RhythmGame(this.seq);
         this.isGameMode = false;
+        this.stepSoundEnabled = true;
 
         this.ctxTarget = { bar: -1, beat: -1, step: -1 };
 
@@ -1622,6 +1632,10 @@ class UI {
         this.configPlaybackModeSelect.innerHTML = `
             <option value="stop" selected>Stop at End</option>
             <option value="loop">Loop</option>
+        `;
+        this.configStepSoundSelect.innerHTML = `
+            <option value="sound" selected>Sound</option>
+            <option value="mute">Mute</option>
         `;
         this.configHitCriteriaSelect.innerHTML = `
             <option value="nice">EXCELLENT+GREAT+NICE</option>
@@ -1826,6 +1840,11 @@ class UI {
         // Playback Mode
         this.configPlaybackModeSelect.addEventListener('change', (e) => {
             this.seq.playbackMode = e.target.value;
+        });
+
+        // Step Sound Mode
+        this.configStepSoundSelect.addEventListener('change', (e) => {
+            this.stepSoundEnabled = (e.target.value === 'sound');
         });
 
         // Notes Reset
@@ -2386,7 +2405,7 @@ class UI {
                                 btn.classList.add('active');
                             }
 
-                            if (!this.seq.isPlaying) {
+                            if (!this.seq.isPlaying && this.stepSoundEnabled) {
                                 this.seq.audio.playInstrument(track.type);
                             }
                         });
