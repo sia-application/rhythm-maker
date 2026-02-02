@@ -661,13 +661,13 @@ class Sequencer {
                         }, Math.max(0, clearTime));
                         this.scheduledTimeouts.push(clearTid);
 
-                        // FINAL STOP: Trigger the UI reset and real STOP only after the audio lookahead buffer
-                        const lastStepDuration = (this.scheduleAheadTime + 0.5) * 1000;
+                        // FINAL STOP: Trigger the UI reset and real STOP shortly after the last note ends
+                        const finalStopDelay = ((this.nextNoteTime - now) + 0.1) * 1000;
                         const finalStopId = setTimeout(() => {
                             if (this.isEndOfProject && this.isPlaying) {
                                 this.stop();
                             }
-                        }, lastStepDuration);
+                        }, Math.max(0, finalStopDelay));
                         this.scheduledTimeouts.push(finalStopId);
 
                         // Position will be reset when stop() is called
@@ -764,7 +764,6 @@ class Sequencer {
 
         if (this.isPlaying) {
             // PAUSE
-            console.log("UI: Pause requested");
             this.isPlaying = false;
             this.isEndOfProject = false; // Ensure we don't accidentally treat this as "finished"
             clearTimeout(this.timerID);
@@ -780,10 +779,19 @@ class Sequencer {
             }
         } else {
             // PLAY or RESUME
-            console.log("UI: Play/Resume requested. isEndOfProject:", this.isEndOfProject);
 
-            // If we finished a song, reset to beginning first
-            if (this.isEndOfProject) {
+            // Detect if we are at the very last step of the project
+            const lastBarIndex = this.bars.length - 1;
+            const lastBar = this.bars[lastBarIndex];
+            const lastBeatIndex = lastBar ? lastBar.beats.length - 1 : 0;
+            const lastBeat = lastBar ? lastBar.beats[lastBeatIndex] : null;
+            const lastStepIndex = lastBeat ? lastBeat.subdivision - 1 : 0;
+            const isAtVeryEnd = (this.playingBarIndex >= lastBarIndex &&
+                this.playingBeatIndex >= lastBeatIndex &&
+                this.playingStepInBeat >= lastStepIndex);
+
+            // If we finished a song or are at the last tile, reset to beginning first
+            if (this.isEndOfProject || isAtVeryEnd) {
                 this.stop();
             }
 
