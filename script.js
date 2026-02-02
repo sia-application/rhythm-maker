@@ -320,6 +320,11 @@ class Sequencer {
         const bar = this.bars[barIndex];
         if (trackIndex >= 0 && trackIndex < bar.tracks.length) {
             bar.tracks.splice(trackIndex, 1);
+
+            // Auto-delete Bar if no tracks left
+            if (bar.tracks.length === 0) {
+                this.removeBar(barIndex);
+            }
         }
     }
 
