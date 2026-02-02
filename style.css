@@ -573,15 +573,26 @@ main {
 }
 
 /* Track Controls */
+.track-number-label {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 2px;
+}
+
 .track-inst-select {
     background: rgba(0, 0, 0, 0.5);
     color: #fff;
-    border: 1px solid #444;
+    border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 4px;
-    padding: 2px;
-    font-size: 0.8rem;
-    width: 120px;
-    /* Increased from 65px to fill more space in 170px column */
+    padding: 2px 4px;
+    font-size: 0.75rem;
+    width: 100%;
+    /* Take full width of row */
+    flex-grow: 1;
+    height: 24px;
 }
 
 .track-del-btn {

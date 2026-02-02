@@ -2347,7 +2347,7 @@ class UI {
             addBeatRightBtn.innerText = '+';
             addBeatRightBtn.className = 'add-beat-col-btn';
             addBeatRightBtn.title = 'Add Beat';
-            addBeatRightBtn.style.gridRow = `1 / span ${2 + bar.tracks.length}`;
+            addBeatRightBtn.style.gridRow = `1 / span ${3 + bar.tracks.length}`;
             addBeatRightBtn.style.gridColumn = `${bar.beats.length + 2}`;
             addBeatRightBtn.addEventListener('click', () => {
                 this.seq.addBeat(barIndex);
@@ -2362,8 +2362,14 @@ class UI {
                 const labelCell = document.createElement('div');
                 labelCell.className = 'grid-row-label';
                 labelCell.style.display = 'flex';
-                labelCell.style.justifyContent = 'space-between';
-                labelCell.style.alignItems = 'center';
+                labelCell.style.flexDirection = 'column';
+                labelCell.style.alignItems = 'flex-start';
+                labelCell.style.gap = '2px';
+                labelCell.style.padding = '4px 0';
+
+                const trackNameLabel = document.createElement('span');
+                trackNameLabel.innerText = `Track ${tIndex + 1}`;
+                trackNameLabel.className = 'track-number-label';
 
                 // Instrument Select
                 const instSelect = document.createElement('select');
@@ -2390,8 +2396,18 @@ class UI {
                     this.renderGrid();
                 });
 
-                labelCell.appendChild(instSelect);
-                labelCell.appendChild(delBtn);
+                // Row for selector and delete btn
+                const actionRow = document.createElement('div');
+                actionRow.style.display = 'flex';
+                actionRow.style.width = '100%';
+                actionRow.style.alignItems = 'center';
+                actionRow.style.gap = '5px';
+
+                actionRow.appendChild(instSelect);
+                actionRow.appendChild(delBtn);
+
+                labelCell.appendChild(trackNameLabel);
+                labelCell.appendChild(actionRow);
                 systemContainer.appendChild(labelCell);
 
                 // Steps
