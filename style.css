@@ -525,8 +525,6 @@ main {
     align-items: center;
     align-self: center;
     /* Center vertically in the grid cell */
-    transform: translateY(18px);
-    /* Adjusted to be between 10px (high) and 25px (low) */
     padding: 0;
     line-height: 1;
 }

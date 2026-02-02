@@ -2311,12 +2311,43 @@ class UI {
                 systemContainer.appendChild(beatHeader);
             });
 
+            // 2. Step Value Row (Formerly 3. Footer row)
+            const valLabel = document.createElement('div');
+            valLabel.className = 'grid-row-label step-value-label';
+            valLabel.innerText = 'Step Value';
+            valLabel.style.fontSize = '0.9rem';
+            systemContainer.appendChild(valLabel);
+
+            bar.beats.forEach((beat) => {
+                const valCell = document.createElement('div');
+                valCell.className = 'beat-value-display';
+
+                // Logic: 
+                // 1. Show full decimal if it's terminating (only 2 and 5 as factors of denominator)
+                // 2. Show 2 decimals + "..." if it's repeating
+                const subdiv = beat.subdivision;
+                const val = 1 / subdiv;
+                let n = subdiv;
+                while (n > 0 && n % 2 === 0) n /= 2;
+                while (n > 0 && n % 5 === 0) n /= 5;
+
+                if (n === 1) {
+                    valCell.innerText = val.toString();
+                } else {
+                    // Truncate to 2 decimals without rounding (e.g., 0.166... -> 0.16...)
+                    const truncated = Math.floor(val * 100) / 100;
+                    valCell.innerText = truncated.toFixed(2) + "...";
+                }
+
+                systemContainer.appendChild(valCell);
+            });
+
             // Add Beat Button (Right Column, Header Row)
             const addBeatRightBtn = document.createElement('button');
             addBeatRightBtn.innerText = '+';
             addBeatRightBtn.className = 'add-beat-col-btn';
             addBeatRightBtn.title = 'Add Beat';
-            addBeatRightBtn.style.gridRow = `1 / span ${1 + bar.tracks.length}`;
+            addBeatRightBtn.style.gridRow = `1 / span ${2 + bar.tracks.length}`;
             addBeatRightBtn.style.gridColumn = `${bar.beats.length + 2}`;
             addBeatRightBtn.addEventListener('click', () => {
                 this.seq.addBeat(barIndex);
@@ -2415,44 +2446,7 @@ class UI {
                 });
             });
 
-            // 3. Footer row: Subdivision Values
-            const valLabel = document.createElement('div');
-            valLabel.className = 'grid-row-label step-value-label';
-            valLabel.innerText = 'Step Value';
-            valLabel.style.fontSize = '0.9rem';
-            systemContainer.appendChild(valLabel);
-
-            bar.beats.forEach((beat) => {
-                const valCell = document.createElement('div');
-                valCell.className = 'beat-value-display';
-
-                // Logic: 
-                // 1. Show full decimal if it's terminating (only 2 and 5 as factors of denominator)
-                // 2. Show 2 decimals + "..." if it's repeating
-                const subdiv = beat.subdivision;
-                const val = 1 / subdiv;
-                let n = subdiv;
-                while (n > 0 && n % 2 === 0) n /= 2;
-                while (n > 0 && n % 5 === 0) n /= 5;
-
-                if (n === 1) {
-                    valCell.innerText = val.toString();
-                } else {
-                    // Truncate to 2 decimals without rounding (e.g., 0.166... -> 0.16...)
-                    const truncated = Math.floor(val * 100) / 100;
-                    valCell.innerText = truncated.toFixed(2) + "...";
-                }
-
-                systemContainer.appendChild(valCell);
-            });
-
             // 3. Add Track Button INSIDE the Bar (Last Row of Grid or separate?)
-            // We can append it to the label column of a new row, or just append a div to the container?
-            // If we append to container, it becomes a grid item.
-            // We want it to span full width?
-            // Grid columns: 1 (170px) + N (beats)
-            // Let's make it span 1 (label) and let beats be empty?
-            // Or make it span all.
             const addTrackContainer = document.createElement('div');
             addTrackContainer.style.gridColumn = '1 / 2'; // Span only first column (Label column)
             addTrackContainer.style.paddingTop = '5px';
@@ -2472,7 +2466,6 @@ class UI {
 
             addTrackContainer.appendChild(addTrackBtn);
             systemContainer.appendChild(addTrackContainer);
-
 
             this.grid.appendChild(systemContainer);
         });
