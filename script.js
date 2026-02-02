@@ -1169,26 +1169,24 @@ class RhythmGame {
         this.lanes = [];
         this.score = 0;
         this.combo = 0;
-        this.hitCount = 0;
-        this.clearActiveNotes();
         this.totalNotes = this.calculateTotalNotes();
         console.log("RhythmGame: Initializing...", this.seq.bars);
         this.updateUI();
 
-        // Create lanes based on tracks in the target bar
-        const bar0 = this.seq.bars[0];
-        if (!bar0) {
-            console.error("RhythmGame: No bars found");
-            return;
+        // Find maximum number of tracks across all bars
+        let maxTracks = 0;
+        this.seq.bars.forEach(bar => {
+            if (bar.tracks.length > maxTracks) {
+                maxTracks = bar.tracks.length;
+            }
+        });
+
+        if (maxTracks === 0) {
+            console.warn("RhythmGame: No tracks found in any bars");
         }
 
-        const tracks = bar0.tracks;
-        if (tracks.length === 0) {
-            console.warn("RhythmGame: No tracks found in Bar 0, adding default lane mapping");
-            // Placeholder lane if no tracks exist?
-        }
-
-        bar0.tracks.forEach((track, i) => {
+        // Create lanes based on maximum tracks
+        for (let i = 0; i < maxTracks; i++) {
             const lane = document.createElement('div');
             lane.className = 'game-lane';
             lane.dataset.laneIndex = i;
@@ -1200,7 +1198,7 @@ class RhythmGame {
             this.container.appendChild(lane);
             this.lanes.push({ el: lane, flash: flash });
             this.laneMap[i] = i;
-        });
+        }
 
         // Robust multi-touch handling on the container
         const handleTouch = (e) => {
