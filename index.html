@@ -20,14 +20,73 @@
             <h1>RHYTHM MAKER PRO</h1>
             <div class="header-controls">
                 <button id="preset-btn" class="btn-secondary">Preset</button>
+                <button id="config-btn" class="btn-secondary">Config</button>
                 <button id="view-toggle-btn" class="btn-secondary">Game Mode</button>
             </div>
         </header>
 
+        <!-- Config Side Panel -->
+        <div id="config-panel" class="preset-panel hidden">
+            <div class="preset-panel-header">
+                <h2>CONFIG</h2>
+                <button id="config-panel-close" class="preset-close-btn">✕</button>
+            </div>
+
+            <div class="config-section">
+                <h3>RHYTHM CONFIG</h3>
+                <div class="config-item">
+                    <label>BPM</label>
+                    <div class="input-row">
+                        <input type="number" id="config-bpm-number" min="20" max="999" value="120" class="number-input">
+                        <input type="range" id="config-bpm-input" min="20" max="999" value="120">
+                    </div>
+                </div>
+                <div class="config-item">
+                    <label>Volume</label>
+                    <div class="input-row">
+                        <input type="number" id="config-vol-number" min="0" max="500" value="50" class="number-input">
+                        <input type="range" id="config-master-vol" min="0" max="5" step="0.01" value="0.5"
+                            class="range-input">
+                    </div>
+                </div>
+                <div class="config-item">
+                    <label>Time Sig</label>
+                    <select id="config-time-sig-select" class="select-input"></select>
+                </div>
+                <div class="config-item">
+                    <label>Subdivision</label>
+                    <select id="config-subdiv-select" class="select-input"></select>
+                </div>
+                <div class="config-item">
+                    <label>Playback</label>
+                    <select id="config-playback-mode-select" class="select-input"></select>
+                </div>
+                <div class="config-item center">
+                    <button id="config-reset-btn" class="action-btn">NOTES RESET</button>
+                </div>
+            </div>
+
+            <div class="config-section">
+                <h3>GAME CONFIG</h3>
+                <div class="config-item">
+                    <label>Speed: <span id="config-game-speed-val">1.0</span></label>
+                    <input type="range" id="config-game-speed-slider" min="0.5" max="10" step="0.5" value="1.0">
+                </div>
+                <div class="config-item">
+                    <label>Hit Criteria</label>
+                    <select id="config-hit-criteria-select" class="select-input"></select>
+                </div>
+                <div class="config-item center">
+                    <button id="config-result-reset-btn" class="action-btn">RESULT RESET</button>
+                </div>
+            </div>
+        </div>
+        <div id="config-overlay" class="preset-overlay hidden"></div>
+
         <!-- Preset Side Panel -->
         <div id="preset-panel" class="preset-panel hidden">
             <div class="preset-panel-header">
-                <h2>プリセット</h2>
+                <h2>PRESET</h2>
                 <button id="preset-panel-close" class="preset-close-btn">✕</button>
             </div>
             <div class="preset-actions">
@@ -94,50 +153,6 @@
                         <input type="range" id="bpm-input" min="20" max="999" value="120">
                     </div>
                 </div>
-
-                <div class="control-group">
-                    <label for="master-vol">Volume</label>
-                    <div class="input-row">
-                        <input type="number" id="vol-number" min="0" max="500" value="50" class="number-input">
-                        <input type="range" id="master-vol" min="0" max="5" step="0.01" value="0.5" class="range-input">
-                    </div>
-                </div>
-
-                <div class="control-group">
-                    <label>Time Sig</label>
-                    <select id="time-sig-select" class="select-input">
-                        <option value="4">4/4</option>
-                        <option value="3">3/4</option>
-                    </select>
-                </div>
-
-                <div class="control-group">
-                    <label>Subdivision</label>
-                    <select id="subdiv-select" class="select-input">
-                        <option value="1">4分音符</option>
-                        <option value="2">8分音符</option>
-                        <option value="4" selected>16分音符</option>
-                        <option value="8">32分音符</option>
-                        <option value="16">64分音符</option>
-                        <option value="3">3連符</option>
-                        <option value="6">6連符</option>
-                        <option value="9">9連符</option>
-                        <option value="12">12連符</option>
-                    </select>
-                </div>
-
-                <div class="control-group">
-                    <label>Playback</label>
-                    <select id="playback-mode-select" class="select-input">
-                        <option value="stop" selected>Stop at End</option>
-                        <option value="loop">Loop</option>
-                    </select>
-                </div>
-
-                <div class="control-group" style="justify-content: center; min-width: auto;">
-                    <button id="reset-btn" class="action-btn"
-                        style="margin-top: 0; padding: 5px 12px; font-size: 0.8rem;">NOTES<br>RESET</button>
-                </div>
             </div>
 
             <div id="sequencer-view" class="active-view">
@@ -149,24 +164,6 @@
 
             <div id="game-view" class="hidden glass-panel">
                 <div class="game-header">
-                    <div class="game-settings-area">
-                        <div class="game-settings-group">
-                            <label>SPEED: <span id="game-speed-val">1.0</span></label>
-                            <input type="range" id="game-speed-slider" min="0.5" max="10" step="0.5" value="1.0">
-                        </div>
-                        <div class="game-settings-group">
-                            <label>HIT CRITERIA</label>
-                            <select id="hit-criteria-select">
-                                <option value="nice">EXCELLENT+GREAT+NICE</option>
-                                <option value="great">EXCELLENT+GREAT</option>
-                                <option value="excellent">EXCELLENT</option>
-                            </select>
-                        </div>
-                        <div class="game-settings-group" style="justify-content: center; min-width: auto;">
-                            <button id="game-reset-btn" class="action-btn"
-                                style="margin-top: 0; padding: 5px 12px; font-size: 0.8rem;">RESULT<br>RESET</button>
-                        </div>
-                    </div>
                     <div class="score-container">SCORE: <span id="game-score">0</span></div>
                     <div class="note-counter-container">NOTES: <span id="game-hits">0</span> / <span
                             id="game-total-notes">0</span></div>

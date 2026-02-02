@@ -35,7 +35,7 @@ class AudioEngine {
         const AudioContext = window.AudioContext || window.webkitAudioContext;
         this.ctx = new AudioContext();
         this.masterGain = this.ctx.createGain();
-        const volEl = document.getElementById('master-vol');
+        const volEl = document.getElementById('config-master-vol');
         this.masterGain.gain.value = volEl ? parseFloat(volEl.value) : 0.5;
         this.masterGain.connect(this.ctx.destination);
         this.isInitialized = true;
@@ -224,6 +224,11 @@ class Sequencer {
         this.currentBarIndex = 0;
         this.currentBeatIndex = 0; // Relative to Bar
         this.currentStepInBeat = 0;
+
+        // Visual/Audio sync indices (marks the note actually being heard)
+        this.playingBarIndex = 0;
+        this.playingBeatIndex = 0;
+        this.playingStepInBeat = 0;
 
         this.nextNoteTime = 0;
         this.lookahead = 25.0; // ms
@@ -665,9 +670,7 @@ class Sequencer {
                         }, lastStepDuration);
                         this.scheduledTimeouts.push(finalStopId);
 
-                        this.currentBarIndex = 0;
-                        this.currentBeatIndex = 0;
-                        this.currentStepInBeat = 0;
+                        // Position will be reset when stop() is called
                         return;
                     }
                     // Loop Sequence
@@ -732,6 +735,9 @@ class Sequencer {
         const tid2 = setTimeout(() => {
             if (this.isPlaying) {
                 ui.highlightStep(barIndex, beatIndex, stepInBeat);
+                this.playingBarIndex = barIndex;
+                this.playingBeatIndex = beatIndex;
+                this.playingStepInBeat = stepInBeat;
             }
         }, Math.max(0, drawTime));
         this.scheduledTimeouts.push(tid2);
@@ -771,11 +777,22 @@ class Sequencer {
             ui.updatePlayButton(false);
         } else {
             // PLAY (or RESUME)
+            // Use playing indices to resume from where the user last heard sound
+            this.currentBarIndex = this.playingBarIndex;
+            this.currentBeatIndex = this.playingBeatIndex;
+            this.currentStepInBeat = this.playingStepInBeat;
+            this.isEndOfProject = false; // Reset flag to allow scheduling
+
             if (typeof ui !== 'undefined' && ui.isGameMode) {
                 // Determine countdown duration (4 beats: 3, 2, 1, GO -> Music starts @ 5th beat)
                 const countdownDuration = (60 / this.bpm) * 4;
                 const startTime = this.audio.ctx.currentTime + 0.1; // 100ms buffer
-                ui.game.resetStats();
+
+                // Only reset stats if starting from the beginning
+                if (this.currentBarIndex === 0 && this.currentBeatIndex === 0 && this.currentStepInBeat === 0) {
+                    ui.game.resetStats();
+                }
+
                 this.startPlayback(countdownDuration, startTime);
                 ui.startCountdown(this.bpm, startTime);
             } else {
@@ -795,7 +812,7 @@ class Sequencer {
 
         // Re-activate master gain if it was ramped down
         this.audio.masterGain.gain.cancelScheduledValues(now);
-        const targetVol = parseFloat(ui.masterVol.value);
+        const targetVol = ui.configMasterVol ? parseFloat(ui.configMasterVol.value) : 0.5;
 
         if (delay > 0) {
             // Ensure volume is UP immediately so we can hear the countdown blips
@@ -853,6 +870,9 @@ class Sequencer {
         this.currentBarIndex = 0;
         this.currentBeatIndex = 0;
         this.currentStepInBeat = 0;
+        this.playingBarIndex = 0;
+        this.playingBeatIndex = 0;
+        this.playingStepInBeat = 0;
     }
 
     updateSettings(bpm, timeSig) {
@@ -1468,11 +1488,7 @@ class UI {
         this.grid = document.getElementById('sequencer-grid');
         this.bpmInput = document.getElementById('bpm-input');
         this.bpmNumber = document.getElementById('bpm-number');
-        this.timeSigSelect = document.getElementById('time-sig-select');
-        this.subdivSelect = document.getElementById('subdiv-select');
         this.playBtn = document.getElementById('play-btn');
-        this.masterVol = document.getElementById('master-vol');
-        this.volNumber = document.getElementById('vol-number');
         this.ctxMenu = document.getElementById('context-menu');
         this.ctxAddBtn = document.getElementById('ctx-add-step');
         this.ctxAddBarBtn = document.getElementById('ctx-add-step-bar');
@@ -1504,12 +1520,35 @@ class UI {
         this.viewToggleBtn = document.getElementById('view-toggle-btn');
         this.sequencerView = document.getElementById('sequencer-view');
         this.gameView = document.getElementById('game-view');
-        this.gameSpeedSlider = document.getElementById('game-speed-slider');
-        this.gameSpeedVal = document.getElementById('game-speed-val');
-        this.hitCriteriaSelect = document.getElementById('hit-criteria-select');
-        this.playbackModeSelect = document.getElementById('playback-mode-select');
         this.countdownOverlay = document.getElementById('countdown-overlay');
         this.countdownNumber = this.countdownOverlay.querySelector('.countdown-number');
+
+        // Config Elements
+        this.configBtn = document.getElementById('config-btn');
+        this.configPanel = document.getElementById('config-panel');
+        this.configOverlay = document.getElementById('config-overlay');
+        this.configPanelClose = document.getElementById('config-panel-close');
+
+        // Rhythm Config Linked Elements
+        this.configBpmNumber = document.getElementById('config-bpm-number');
+        this.configBpmInput = document.getElementById('config-bpm-input');
+        this.configVolNumber = document.getElementById('config-vol-number');
+        this.configMasterVol = document.getElementById('config-master-vol');
+
+        // Config Selects
+        this.configTimeSigSelect = document.getElementById('config-time-sig-select');
+        this.configSubdivSelect = document.getElementById('config-subdiv-select');
+        this.configPlaybackModeSelect = document.getElementById('config-playback-mode-select');
+        this.configHitCriteriaSelect = document.getElementById('config-hit-criteria-select');
+
+        // Config Buttons
+        this.configResetBtn = document.getElementById('config-reset-btn');
+        this.configResultResetBtn = document.getElementById('config-result-reset-btn');
+
+        // Game Config Elements
+        this.configGameSpeedSlider = document.getElementById('config-game-speed-slider');
+        this.configGameSpeedVal = document.getElementById('config-game-speed-val');
+
         this.game = new RhythmGame(this.seq);
         this.isGameMode = false;
 
@@ -1539,8 +1578,43 @@ class UI {
         this.setupListeners();
         this.setupContextMenu();
         this.setupPresetListeners();
+        this.setupConfigListeners();
+        this.initializeConfigContents();
         this.renderGrid();
         console.log("UI: Initialized successfully");
+    }
+
+    initializeConfigContents() {
+        // Populate lists from Sequencer defaults or existing options
+        this.configTimeSigSelect.innerHTML = `
+            <option value="4">4/4</option>
+            <option value="3">3/4</option>
+        `;
+        this.configSubdivSelect.innerHTML = `
+            <option value="1">4分音符</option>
+            <option value="2">8分音符</option>
+            <option value="4" selected>16分音符</option>
+            <option value="8">32分音符</option>
+            <option value="16">64分音符</option>
+            <option value="3">3連符</option>
+            <option value="6">6連符</option>
+            <option value="9">9連符</option>
+            <option value="12">12連符</option>
+        `;
+        this.configPlaybackModeSelect.innerHTML = `
+            <option value="stop" selected>Stop at End</option>
+            <option value="loop">Loop</option>
+        `;
+        this.configHitCriteriaSelect.innerHTML = `
+            <option value="nice">EXCELLENT+GREAT+NICE</option>
+            <option value="great">EXCELLENT+GREAT</option>
+            <option value="excellent">EXCELLENT ONLY</option>
+        `;
+
+        // Set initial values
+        this.configTimeSigSelect.value = this.seq.timeSignature;
+        this.configPlaybackModeSelect.value = this.seq.playbackMode;
+        this.configHitCriteriaSelect.value = this.game.hitCriteria;
     }
 
     startCountdown(bpm, baseTime = null) {
@@ -1597,81 +1671,27 @@ class UI {
         // Controls
         this.playBtn.addEventListener('click', () => this.seq.play());
         document.getElementById('stop-btn').addEventListener('click', () => this.seq.stop());
-        document.getElementById('reset-btn').addEventListener('click', () => {
-            this.seq.bars.forEach(bar => {
-                bar.tracks.forEach(track => {
-                    track.pattern.forEach(beat => beat.fill(false));
-                });
-            });
-            this.renderGrid();
-        });
 
         // Settings
         // BPM sync
-        const updateBpm = (val) => {
+        const updateBpm = (val, source) => {
             let num = parseInt(val);
             if (isNaN(num)) return;
             num = Math.max(20, Math.min(999, num));
             this.seq.bpm = num;
             this.seq.updateSettings(num, this.seq.timeSignature);
-            this.bpmInput.value = num;
-            if (this.bpmNumber) this.bpmNumber.value = num;
-        };
 
-        this.bpmInput.addEventListener('input', (e) => updateBpm(e.target.value));
-        if (this.bpmNumber) {
-            this.bpmNumber.addEventListener('change', (e) => updateBpm(e.target.value));
-        }
-
-        // Volume sync
-        const updateVol = (val, isSlider) => {
-            let v = parseFloat(val);
-            if (isNaN(v)) return;
-
-            let sliderVal, numberVal;
-            if (isSlider) {
-                sliderVal = v;
-                numberVal = Math.round(v * 100);
-            } else {
-                numberVal = Math.max(0, Math.min(500, Math.round(v)));
-                sliderVal = numberVal / 100;
-            }
-
-            this.masterVol.value = sliderVal;
-            if (this.volNumber) this.volNumber.value = numberVal;
-
-            if (this.seq.audio.isInitialized) {
-                this.seq.audio.masterGain.gain.setTargetAtTime(sliderVal, this.seq.audio.ctx.currentTime, 0.05);
-            }
-        };
-
-        if (this.masterVol) {
-            this.masterVol.addEventListener('input', (e) => updateVol(e.target.value, true));
-        }
-        if (this.volNumber) {
-            this.volNumber.addEventListener('change', (e) => updateVol(e.target.value, false));
-        }
-
-        const updateParams = () => {
-            this.seq.updateSettings(
-                parseInt(this.bpmInput.value),
-                parseInt(this.timeSigSelect.value)
-            );
-        };
-
-        this.timeSigSelect.addEventListener('change', updateParams);
-
-        // "Set All" subdivision
-        this.subdivSelect.addEventListener('change', (e) => {
-            const val = parseInt(e.target.value);
-            // Apply to ALL bars? Users usually expect this.
-            this.seq.bars.forEach((bar, barIndex) => {
-                for (let i = 0; i < bar.beats.length; i++) {
-                    this.seq.updateBeatSubdivision(barIndex, i, val);
-                }
+            // Sync all BPM inputs
+            const targets = [this.bpmInput, this.bpmNumber, this.configBpmInput, this.configBpmNumber];
+            targets.forEach(t => {
+                if (t && t !== source) t.value = num;
             });
-            this.renderGrid();
-        });
+        };
+
+        this.bpmInput.addEventListener('input', (e) => updateBpm(e.target.value, e.target));
+        if (this.bpmNumber) {
+            this.bpmNumber.addEventListener('change', (e) => updateBpm(e.target.value, e.target));
+        }
 
         // View Toggle
         this.viewToggleBtn.addEventListener('click', () => {
@@ -1699,42 +1719,126 @@ class UI {
                 this.game.handleInput(-1, e.timeStamp);
             }
         });
+    }
 
-        // Speed Slider
-        if (this.gameSpeedSlider) {
-            this.gameSpeedSlider.addEventListener('input', (e) => {
-                const val = parseFloat(e.target.value);
-                this.seq.noteSpeed = val;
-                this.seq.updateScheduleAheadTime();
-                if (this.gameSpeedVal) this.gameSpeedVal.innerText = val.toFixed(1);
+    setupConfigListeners() {
+        const addTapListener = (element, handler) => {
+            if (!element) return;
+            element.addEventListener('click', handler);
+            element.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                handler(e);
             });
-        }
+        };
 
-        // Hit Criteria
-        if (this.hitCriteriaSelect) {
-            this.hitCriteriaSelect.addEventListener('change', (e) => {
-                this.game.hitCriteria = e.target.value;
+        // Open/Close
+        addTapListener(this.configBtn, () => {
+            this.configPanel.classList.remove('hidden');
+            this.configOverlay.classList.remove('hidden');
+            requestAnimationFrame(() => {
+                this.configPanel.classList.add('active');
+                this.configOverlay.classList.add('active');
             });
-        }
+        });
+
+        const closeConfig = () => {
+            this.configPanel.classList.remove('active');
+            this.configOverlay.classList.remove('active');
+            setTimeout(() => {
+                this.configPanel.classList.add('hidden');
+                this.configOverlay.classList.add('hidden');
+            }, 300);
+        };
+
+        addTapListener(this.configPanelClose, closeConfig);
+        addTapListener(this.configOverlay, closeConfig);
+
+        // BPM Sync (Reuse updateBpm logic)
+        const updateBpm = (val, source) => {
+            let num = parseInt(val);
+            if (isNaN(num)) return;
+            num = Math.max(20, Math.min(999, num));
+            this.seq.bpm = num;
+            this.seq.updateSettings(num, this.seq.timeSignature);
+
+            const targets = [this.bpmInput, this.bpmNumber, this.configBpmInput, this.configBpmNumber];
+            targets.forEach(t => {
+                if (t && t !== source) t.value = num;
+            });
+        };
+
+        this.configBpmInput.addEventListener('input', (e) => updateBpm(e.target.value, e.target));
+        this.configBpmNumber.addEventListener('change', (e) => updateBpm(e.target.value, e.target));
+
+        // Volume sync
+        const updateVol = (val, source, isSlider) => {
+            let v = parseFloat(val);
+            if (isNaN(v)) return;
+
+            const sliderVal = isSlider ? v : Math.max(0, Math.min(500, Math.round(v))) / 100;
+            const numberVal = isSlider ? Math.round(v * 100) : Math.max(0, Math.min(500, Math.round(v)));
+
+            if (this.configMasterVol) this.configMasterVol.value = sliderVal;
+            if (this.configVolNumber) this.configVolNumber.value = numberVal;
+
+            if (this.seq.audio.isInitialized) {
+                this.seq.audio.masterGain.gain.setTargetAtTime(sliderVal, this.seq.audio.ctx.currentTime, 0.05);
+            }
+        };
+
+        this.configMasterVol.addEventListener('input', (e) => updateVol(e.target.value, e.target, true));
+        this.configVolNumber.addEventListener('change', (e) => updateVol(e.target.value, e.target, false));
+
+        // Time Sig
+        this.configTimeSigSelect.addEventListener('change', (e) => {
+            this.seq.updateSettings(this.seq.bpm, parseInt(e.target.value));
+        });
+
+        // Subdivision
+        this.configSubdivSelect.addEventListener('change', (e) => {
+            const val = parseInt(e.target.value);
+            this.seq.bars.forEach((bar, barIndex) => {
+                for (let i = 0; i < bar.beats.length; i++) {
+                    this.seq.updateBeatSubdivision(barIndex, i, val);
+                }
+            });
+            this.renderGrid();
+        });
 
         // Playback Mode
-        if (this.playbackModeSelect) {
-            this.playbackModeSelect.addEventListener('change', (e) => {
-                console.log("UI: Playback mode changed to:", e.target.value);
-                this.seq.playbackMode = e.target.value;
-            });
-            // Initial sync
-            this.seq.playbackMode = this.playbackModeSelect.value;
-        }
+        this.configPlaybackModeSelect.addEventListener('change', (e) => {
+            this.seq.playbackMode = e.target.value;
+        });
 
-        // Game Stats Reset
-        const gameResetBtn = document.getElementById('game-reset-btn');
-        if (gameResetBtn) {
-            gameResetBtn.addEventListener('click', () => {
-                this.game.resetStats();
-            });
-        }
+        // Notes Reset
+        addTapListener(this.configResetBtn, () => {
+            if (confirm('全てのノートをリセットしますか？')) {
+                this.seq.bars.forEach(bar => {
+                    bar.tracks.forEach(track => {
+                        track.pattern.forEach(beat => beat.fill(false));
+                    });
+                });
+                this.renderGrid();
+            }
+        });
 
+        // Game Speed
+        this.configGameSpeedSlider.addEventListener('input', (e) => {
+            const val = parseFloat(e.target.value);
+            this.seq.noteSpeed = val;
+            this.seq.updateScheduleAheadTime();
+            this.configGameSpeedVal.innerText = val.toFixed(1);
+        });
+
+        // Hit Criteria
+        this.configHitCriteriaSelect.addEventListener('change', (e) => {
+            this.game.hitCriteria = e.target.value;
+        });
+
+        // Result Reset
+        addTapListener(this.configResultResetBtn, () => {
+            this.game.resetStats();
+        });
     }
 
     openContextMenu(posX, posY, btn, beatCell) {
@@ -2687,9 +2791,12 @@ class UI {
 
         // Update UI controls
         this.bpmInput.value = this.seq.bpm;
-        this.bpmNumber.value = this.seq.bpm;
-        this.timeSigSelect.value = this.seq.timeSignature;
-        this.playbackModeSelect.value = this.seq.playbackMode;
+        if (this.bpmNumber) this.bpmNumber.value = this.seq.bpm;
+        if (this.configBpmInput) this.configBpmInput.value = this.seq.bpm;
+        if (this.configBpmNumber) this.configBpmNumber.value = this.seq.bpm;
+
+        if (this.configTimeSigSelect) this.configTimeSigSelect.value = this.seq.timeSignature;
+        if (this.configPlaybackModeSelect) this.configPlaybackModeSelect.value = this.seq.playbackMode;
 
         // Re-render grid
         this.renderGrid();
