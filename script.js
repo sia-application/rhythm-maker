@@ -2601,6 +2601,14 @@ class UI {
     openSaveDialog() {
         this.presetNameInput.value = '';
         this.updateFolderSelect();
+
+        // If a specific project is selected in the sidebar, pre-select it in the dialog
+        if (this.selectedFolderId && this.selectedFolderId !== 'root') {
+            this.presetFolderSelect.value = this.selectedFolderId;
+        } else {
+            this.presetFolderSelect.value = ''; // Default to Root
+        }
+
         this.saveDialog.classList.remove('hidden');
         requestAnimationFrame(() => {
             this.saveDialog.classList.add('active');
