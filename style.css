@@ -1833,6 +1833,28 @@ main {
         font-size: 0.9rem !important;
     }
 
+    /* Force Make Tools to single line */
+    .step-action-dropdown {
+        flex-direction: row !important;
+        align-items: center !important;
+        justify-content: space-between;
+    }
+
+    /* Reduce dropdown width */
+    .step-action-dropdown .select-input {
+        width: auto !important;
+        flex: 1;
+        min-width: 0;
+        max-width: none;
+        font-size: 0.8rem;
+    }
+
+    .step-action-dropdown label {
+        white-space: nowrap;
+        margin-right: 10px;
+        text-align: left !important;
+    }
+
     /* Sequencer View */
     #sequencer-view {
         overflow-x: auto;
