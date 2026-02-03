@@ -665,6 +665,23 @@ main {
     transform: translateY(-1px);
 }
 
+.btn-small-action {
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    padding: 2px 8px;
+    color: var(--text-muted);
+    border-radius: 4px;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 0.7rem;
+    transition: all 0.2s ease;
+}
+
+.btn-small-action:hover {
+    background: rgba(255, 255, 255, 0.2);
+    color: #fff;
+}
+
 
 
 /* Step Action Dropdown */
