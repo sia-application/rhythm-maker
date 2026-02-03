@@ -1024,12 +1024,27 @@ class Sequencer {
     }
 
     // Serialize current state to JSON object
-    serialize() {
+    serialize(extraData = {}) {
         return {
             bpm: this.bpm,
             timeSignature: this.timeSignature,
             playbackMode: this.playbackMode,
             lastSelectedInstrument: this.lastSelectedInstrument,
+            config: {
+                masterVolume: this.audio.masterGain ? this.audio.masterGain.gain.value : (document.getElementById('config-master-vol')?.value || 0.5),
+                playbackMode: this.playbackMode,
+                hitCriteria: extraData.hitCriteria || 'great',
+                gameSpeed: extraData.gameSpeed || 1.0
+            },
+            uiState: {
+                stepAction: extraData.stepAction || 'toggle'
+            },
+            gameResults: {
+                score: extraData.score || 0,
+                hits: extraData.hits || 0,
+                totalNotes: extraData.totalNotes || 0,
+                combo: extraData.combo || 0
+            },
             bars: this.bars.map(bar => ({
                 beats: bar.beats.map(b => ({ subdivision: b.subdivision })),
                 tracks: bar.tracks.map(track => ({
@@ -1049,6 +1064,18 @@ class Sequencer {
         this.timeSignature = data.timeSignature || 4;
         this.playbackMode = data.playbackMode || 'stop';
         this.lastSelectedInstrument = data.lastSelectedInstrument || 'metronome';
+
+        // Load extended config if available
+        if (data.config) {
+            if (data.config.masterVolume !== undefined) {
+                try {
+                    this.audio.masterGain.gain.value = data.config.masterVolume;
+                } catch (e) {
+                    console.warn("Failed to set master volume:", e);
+                }
+            }
+            if (data.config.playbackMode) this.playbackMode = data.config.playbackMode;
+        }
 
         this.bars = [];
         if (data.bars && Array.isArray(data.bars)) {
@@ -1071,6 +1098,8 @@ class Sequencer {
         this.currentBarIndex = 0;
         this.currentBeatIndex = 0;
         this.currentStepInBeat = 0;
+
+        // Note: UI-specific restoration (score, make tools) should be handled in UI.loadPreset
     }
 }
 
@@ -2655,7 +2684,17 @@ class UI {
             return;
         }
 
-        const data = this.seq.serialize();
+        const extraData = {
+            hitCriteria: this.game.hitCriteria,
+            gameSpeed: this.configGameSpeedVal ? parseFloat(this.configGameSpeedVal.textContent) : 1.0,
+            stepAction: this.stepActionSelect ? this.stepActionSelect.value : 'toggle',
+            score: this.game.scoreEl ? parseInt(this.game.scoreEl.textContent) : 0,
+            hits: this.game.hitEl ? parseInt(this.game.hitEl.textContent) : 0,
+            totalNotes: this.game.totalNotesEl ? parseInt(this.game.totalNotesEl.textContent) : 0,
+            combo: this.game.comboEl ? parseInt(this.game.comboEl.textContent) : 0
+        };
+
+        const data = this.seq.serialize(extraData);
 
         await this.presetManager.savePreset(name, folderId, data, this.currentShareId);
         this.closeSaveDialog();
@@ -2976,8 +3015,10 @@ class UI {
     loadPreset(preset) {
         if (!preset || !preset.data) return;
 
+        const data = preset.data;
+
         // Deserialize data
-        this.seq.deserialize(preset.data);
+        this.seq.deserialize(data);
 
         // Update UI controls
         this.bpmInput.value = this.seq.bpm;
@@ -2987,6 +3028,41 @@ class UI {
 
         if (this.configTimeSigSelect) this.configTimeSigSelect.value = this.seq.timeSignature;
         if (this.configPlaybackModeSelect) this.configPlaybackModeSelect.value = this.seq.playbackMode;
+
+        // Restore Config extended data
+        if (data.config) {
+            if (data.config.masterVolume !== undefined) {
+                const volPercent = Math.round(data.config.masterVolume * 100);
+                if (this.configVolNumber) this.configVolNumber.value = volPercent;
+                if (this.configMasterVol) this.configMasterVol.value = data.config.masterVolume;
+            }
+            if (data.config.hitCriteria && this.configHitCriteriaSelect) {
+                this.configHitCriteriaSelect.value = data.config.hitCriteria;
+                this.game.hitCriteria = data.config.hitCriteria;
+            }
+            if (data.config.gameSpeed && this.configGameSpeedSlider) {
+                this.configGameSpeedSlider.value = data.config.gameSpeed;
+                this.configGameSpeedVal.textContent = data.config.gameSpeed.toFixed(1);
+            }
+        }
+
+        // Restore UI state
+        if (data.uiState && data.uiState.stepAction && this.stepActionSelect) {
+            this.stepActionSelect.value = data.uiState.stepAction;
+        }
+
+        // Restore Game results
+        if (data.gameResults) {
+            this.game.score = data.gameResults.score || 0;
+            this.game.hitCount = data.gameResults.hits || 0;
+            this.game.totalNotes = data.gameResults.totalNotes || 0;
+            this.game.combo = data.gameResults.combo || 0;
+
+            if (this.game.scoreEl) this.game.scoreEl.textContent = this.game.score;
+            if (this.game.hitEl) this.game.hitEl.textContent = this.game.hitCount;
+            if (this.game.totalNotesEl) this.game.totalNotesEl.textContent = this.game.totalNotes;
+            if (this.game.comboEl) this.game.comboEl.textContent = this.game.combo;
+        }
 
         // Re-render grid
         this.renderGrid();
@@ -3024,8 +3100,18 @@ class UI {
                 this.shareUrlInput.value = 'Generating...';
             }
 
-            // Get sequencer data
-            const data = this.seq.serialize();
+            // Get sequencer data with UI state
+            const extraData = {
+                hitCriteria: this.game.hitCriteria,
+                gameSpeed: this.configGameSpeedVal ? parseFloat(this.configGameSpeedVal.textContent) : 1.0,
+                stepAction: this.stepActionSelect ? this.stepActionSelect.value : 'toggle',
+                score: this.game.scoreEl ? parseInt(this.game.scoreEl.textContent) : 0,
+                hits: this.game.hitEl ? parseInt(this.game.hitEl.textContent) : 0,
+                totalNotes: this.game.totalNotesEl ? parseInt(this.game.totalNotesEl.textContent) : 0,
+                combo: this.game.comboEl ? parseInt(this.game.comboEl.textContent) : 0
+            };
+
+            const data = this.seq.serialize(extraData);
 
             // Generate a short unique ID (8 characters)
             const generateShortId = () => {
@@ -3040,6 +3126,10 @@ class UI {
             const shareId = generateShortId();
 
             // Save to Firestore (convert to JSON string to avoid nested array limitation)
+            if (typeof db === 'undefined') {
+                throw new Error("Firestore 'db' is not defined. Check firebase-config.js.");
+            }
+
             await db.collection('shares').doc(shareId).set({
                 dataJson: JSON.stringify(data),
                 createdAt: firebase.firestore.FieldValue.serverTimestamp()
@@ -3068,17 +3158,8 @@ class UI {
                 this.generateUrlBtn.classList.remove('loading');
             }
         } finally {
-            // Remove loading state if success (but keep disabled)
-            if (this.generateUrlBtn && !this.generateUrlBtn.disabled) {
-                // This block only runs if we didn't hit the error re-enable
-                // But wait, the standard logic is:
-                // Start: disable + loading
-                // Error: enable + remove loading
-                // Success: keep disabled + remove loading
-            }
             if (this.generateUrlBtn) {
                 this.generateUrlBtn.classList.remove('loading');
-                // We DON'T set disabled = false here to satisfy "stays disabled until reload"
             }
         }
     }
@@ -3145,6 +3226,41 @@ class UI {
                     if (this.configBpmNumber) this.configBpmNumber.value = this.seq.bpm;
                     if (this.configTimeSigSelect) this.configTimeSigSelect.value = this.seq.timeSignature;
                     if (this.configPlaybackModeSelect) this.configPlaybackModeSelect.value = this.seq.playbackMode;
+
+                    // Restore Config extended data
+                    if (parsedData.config) {
+                        if (parsedData.config.masterVolume !== undefined) {
+                            const volPercent = Math.round(parsedData.config.masterVolume * 100);
+                            if (this.configVolNumber) this.configVolNumber.value = volPercent;
+                            if (this.configMasterVol) this.configMasterVol.value = parsedData.config.masterVolume;
+                        }
+                        if (parsedData.config.hitCriteria && this.configHitCriteriaSelect) {
+                            this.configHitCriteriaSelect.value = parsedData.config.hitCriteria;
+                            this.game.hitCriteria = parsedData.config.hitCriteria;
+                        }
+                        if (parsedData.config.gameSpeed && this.configGameSpeedSlider) {
+                            this.configGameSpeedSlider.value = parsedData.config.gameSpeed;
+                            this.configGameSpeedVal.textContent = parsedData.config.gameSpeed.toFixed(1);
+                        }
+                    }
+
+                    // Restore UI state
+                    if (parsedData.uiState && parsedData.uiState.stepAction && this.stepActionSelect) {
+                        this.stepActionSelect.value = parsedData.uiState.stepAction;
+                    }
+
+                    // Restore Game results
+                    if (parsedData.gameResults) {
+                        this.game.score = parsedData.gameResults.score || 0;
+                        this.game.hitCount = parsedData.gameResults.hits || 0;
+                        this.game.totalNotes = parsedData.gameResults.totalNotes || 0;
+                        this.game.combo = parsedData.gameResults.combo || 0;
+
+                        if (this.game.scoreEl) this.game.scoreEl.textContent = this.game.score;
+                        if (this.game.hitEl) this.game.hitEl.textContent = this.game.hitCount;
+                        if (this.game.totalNotesEl) this.game.totalNotesEl.textContent = this.game.totalNotes;
+                        if (this.game.comboEl) this.game.comboEl.textContent = this.game.combo;
+                    }
 
                     console.log('Loaded from Firebase share');
                     this.updatePresetPanelVisibility(true);
