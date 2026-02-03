@@ -2350,12 +2350,11 @@ class UI {
                                 } else if (updatedState === true) {
                                     btn.classList.add('active');
                                 }
+                            }
 
-                                // Play sound if toggle action was used
-                                const action = this.stepActionSelect.value;
-                                if (action === 'toggle' && !this.seq.isPlaying && this.stepSoundEnabled) {
-                                    this.seq.audio.playInstrument(track.type);
-                                }
+                            // Play sound for all selection actions (not just toggle)
+                            if (!this.seq.isPlaying && this.stepSoundEnabled) {
+                                this.seq.audio.playInstrument(track.type);
                             }
                         });
                         beatCell.appendChild(btn);
