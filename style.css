@@ -1317,6 +1317,92 @@ main {
     overflow-y: auto;
 }
 
+/* Share URL Section */
+/* Share URL Section */
+.share-url-section {
+    padding: 15px 20px;
+    border-top: 1px solid var(--glass-border);
+}
+
+.share-url-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+}
+
+.share-url-section h3 {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-bottom: 0;
+    white-space: nowrap;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.btn-icon {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--glass-border);
+    color: var(--text-main);
+    border-radius: 4px;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.9rem;
+    flex-shrink: 0;
+    padding: 0;
+    cursor: pointer;
+}
+
+.btn-icon:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid var(--primary-color);
+}
+
+.share-url-display {
+    display: flex;
+    gap: 4px;
+    flex: 1;
+    align-items: center;
+    overflow: hidden;
+}
+
+.share-url-input {
+    flex: 1;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--glass-border);
+    border-radius: 4px;
+    padding: 5px 8px;
+    color: var(--text-main);
+    font-size: 0.75rem;
+    outline: none;
+    min-width: 0;
+}
+
+.copy-url-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    width: 28px;
+    height: 28px;
+    min-width: 28px;
+    flex-shrink: 0;
+    border-radius: 4px;
+}
+
+.copy-url-btn svg {
+    flex-shrink: 0;
+}
+
+.copy-url-btn.copied {
+    background: rgba(0, 255, 136, 0.2);
+    border-color: #00ff88;
+    color: #00ff88;
+}
+
 .preset-list {
     display: flex;
     flex-direction: column;

@@ -1664,10 +1664,18 @@ class UI {
         this.currentProjectDisplay = document.getElementById('current-project-name');
         this.currentPresetDisplay = document.getElementById('current-preset-name');
 
+        // Share URL Elements
+        this.generateUrlBtn = document.getElementById('generate-url-btn');
+        this.shareUrlDisplay = document.getElementById('share-url-display');
+        this.shareUrlInput = document.getElementById('share-url-input');
+        this.copyUrlBtn = document.getElementById('copy-url-btn');
+
         this.setupListeners();
         this.setupPresetListeners();
         this.setupConfigListeners();
+        this.setupShareUrlListeners();
         this.initializeConfigContents();
+        this.loadFromUrlParams(); // Load from URL if params exist
         this.renderGrid();
         console.log("UI: Initialized successfully");
     }
@@ -2802,6 +2810,191 @@ class UI {
         this.updateCurrentInfo(preset.name, preset.folderId);
 
         console.log(`Loaded preset: ${preset.name}`);
+    }
+
+    // ==================== SHARE URL FEATURE ====================
+
+    setupShareUrlListeners() {
+        if (this.generateUrlBtn) {
+            this.generateUrlBtn.addEventListener('click', () => this.generateShareUrl());
+        }
+        if (this.copyUrlBtn) {
+            this.copyUrlBtn.addEventListener('click', () => this.copyShareUrl());
+        }
+    }
+
+    generateShareUrl() {
+        try {
+            // Create compact data format with short keys
+            const data = this.seq.serialize();
+            const compact = {
+                b: data.bpm,
+                t: data.timeSignature,
+                p: data.playbackMode === 'loop' ? 1 : 0,
+                r: data.bars.map(bar => ({
+                    e: bar.beats.map(b => b.subdivision),
+                    k: bar.tracks.map(track => ({
+                        y: track.type,
+                        v: Math.round(track.volume * 10) / 10,
+                        n: track.pattern.map(bp =>
+                            bp.map(s => s === true ? 1 : s === 'nogame' ? 2 : 0).join('')
+                        ).join(',')
+                    }))
+                }))
+            };
+
+            const jsonStr = JSON.stringify(compact);
+
+            // Encode to Base64 (handling Unicode)
+            const base64 = btoa(unescape(encodeURIComponent(jsonStr)));
+
+            // Build URL
+            const url = new URL(window.location.href);
+            url.search = ''; // Clear existing params
+            url.searchParams.set('d', base64);  // Use shorter param name
+
+            // Display URL
+            if (this.shareUrlInput) {
+                this.shareUrlInput.value = url.toString();
+            }
+
+            console.log('Share URL generated (compact format)');
+        } catch (error) {
+            console.error('Error generating share URL:', error);
+            alert('Failed to generate share URL');
+        }
+    }
+
+    copyShareUrl() {
+        if (!this.shareUrlInput || !this.shareUrlInput.value) return;
+
+        const url = this.shareUrlInput.value;
+
+        // Try modern Clipboard API first
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(url).then(() => {
+                this.showCopySuccess();
+            }).catch(() => {
+                this.fallbackCopy(url);
+            });
+        } else {
+            this.fallbackCopy(url);
+        }
+    }
+
+    fallbackCopy(text) {
+        // Fallback for older browsers
+        this.shareUrlInput.select();
+        this.shareUrlInput.setSelectionRange(0, 99999);
+
+        try {
+            document.execCommand('copy');
+            this.showCopySuccess();
+        } catch (err) {
+            console.error('Copy failed:', err);
+            alert('Copy failed. Please copy manually.');
+        }
+    }
+
+    showCopySuccess() {
+        if (this.copyUrlBtn) {
+            this.copyUrlBtn.classList.add('copied');
+            setTimeout(() => {
+                this.copyUrlBtn.classList.remove('copied');
+            }, 1500);
+        }
+    }
+
+    loadFromUrlParams() {
+        try {
+            const urlParams = new URLSearchParams(window.location.search);
+            let dataParam = urlParams.get('d');  // New short param
+            let isCompact = true;
+
+            // Fallback to old format
+            if (!dataParam) {
+                dataParam = urlParams.get('data');
+                isCompact = false;
+            }
+
+            if (!dataParam) {
+                this.updatePresetPanelVisibility(false);
+                return;
+            }
+
+            // Decode Base64 (handling Unicode)
+            const decoded = decodeURIComponent(escape(atob(dataParam)));
+
+            let data;
+            if (isCompact) {
+                // Parse compact format
+                const compact = JSON.parse(decoded);
+                data = {
+                    bpm: compact.b,
+                    timeSignature: compact.t,
+                    playbackMode: compact.p === 1 ? 'loop' : 'stop',
+                    lastSelectedInstrument: 'metronome',
+                    bars: compact.r.map(bar => ({
+                        beats: bar.e.map(subdiv => ({ subdivision: subdiv })),
+                        tracks: bar.k.map(track => ({
+                            type: track.y,
+                            volume: track.v,
+                            pattern: track.n.split(',').map(bp =>
+                                bp.split('').map(s => s === '1' ? true : s === '2' ? 'nogame' : false)
+                            )
+                        }))
+                    }))
+                };
+            } else {
+                // Old format
+                data = JSON.parse(decoded);
+            }
+
+            // Load into sequencer
+            this.seq.deserialize(data);
+
+            // Update UI controls
+            this.bpmInput.value = this.seq.bpm;
+            if (this.bpmNumber) this.bpmNumber.value = this.seq.bpm;
+            if (this.configBpmInput) this.configBpmInput.value = this.seq.bpm;
+            if (this.configBpmNumber) this.configBpmNumber.value = this.seq.bpm;
+            if (this.configTimeSigSelect) this.configTimeSigSelect.value = this.seq.timeSignature;
+            if (this.configPlaybackModeSelect) this.configPlaybackModeSelect.value = this.seq.playbackMode;
+
+            console.log('Loaded from URL parameters');
+            this.updatePresetPanelVisibility(true); // Parameter exists -> Shared Mode
+        } catch (error) {
+            console.error('Error loading from URL params:', error);
+            this.updatePresetPanelVisibility(false); // Parameter absent -> Standard Mode
+        }
+    }
+
+    updatePresetPanelVisibility(isSharedMode) {
+        const presetActions = this.presetPanel.querySelector('.preset-actions');
+        const presetFolders = this.presetPanel.querySelector('.preset-folders');
+        const presetListSection = this.presetPanel.querySelector('.preset-list-section');
+        const shareUrlSection = this.presetPanel.querySelector('.share-url-section');
+        const panelTitle = this.presetPanel.querySelector('.preset-panel-header h2');
+
+        if (isSharedMode) {
+            // Parameter exists: Show Preset functions, Hide Share URL
+            this.presetBtn.innerText = 'Preset';
+            if (panelTitle) panelTitle.innerText = 'PRESET';
+
+            if (presetActions) presetActions.classList.remove('hidden');
+            if (presetFolders) presetFolders.classList.remove('hidden');
+            if (presetListSection) presetListSection.classList.remove('hidden');
+            if (shareUrlSection) shareUrlSection.classList.add('hidden');
+        } else {
+            // No Parameter: Change to Share URL mode
+            this.presetBtn.innerText = 'Share URL';
+            if (panelTitle) panelTitle.innerText = 'SHARE URL';
+
+            if (presetActions) presetActions.classList.add('hidden');
+            if (presetFolders) presetFolders.classList.add('hidden');
+            if (presetListSection) presetListSection.classList.add('hidden');
+            if (shareUrlSection) shareUrlSection.classList.remove('hidden');
+        }
     }
 
     escapeHtml(text) {
