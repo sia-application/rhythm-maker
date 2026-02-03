@@ -1,5 +1,5 @@
 /**
- * Rhythm Maker App
+ * Rhythm Maker PRO App
  * Handles Audio, Sequencing, and UI interactions.
  */
 
