@@ -1163,6 +1163,8 @@ class RhythmGame {
         this.seq = sequencer;
         this.score = 0;
         this.combo = 0;
+        this.hitCount = 0;
+        this.totalNotes = 0;
         this.container = document.getElementById('game-lanes');
         this.scoreEl = document.getElementById('game-score');
         this.hitEl = document.getElementById('game-hits');
@@ -1516,31 +1518,8 @@ class UI {
         this.bpmInput = document.getElementById('bpm-input');
         this.bpmNumber = document.getElementById('bpm-number');
         this.playBtn = document.getElementById('play-btn');
-        this.ctxMenu = document.getElementById('context-menu');
-        this.ctxAddBtn = document.getElementById('ctx-add-step');
-        this.ctxAddBarBtn = document.getElementById('ctx-add-step-bar');
-        this.ctxAddAllBtn = document.getElementById('ctx-add-step-all');
-        this.ctxAddGlobalBtn = document.getElementById('ctx-add-step-global');
-        this.ctxDelBtn = document.getElementById('ctx-del-step');
-        this.ctxDelBarBtn = document.getElementById('ctx-del-step-bar');
-        this.ctxDelAllBtn = document.getElementById('ctx-del-step-all');
-        this.ctxDelGlobalBtn = document.getElementById('ctx-del-step-global');
+        this.stepActionSelect = document.getElementById('step-action-select');
 
-        this.ctxSelStepBtn = document.getElementById('ctx-sel-step');
-        this.ctxSelColBtn = document.getElementById('ctx-sel-col');
-        this.ctxSelAllBtn = document.getElementById('ctx-sel-all');
-        this.ctxUnselStepBtn = document.getElementById('ctx-unsel-step');
-        this.ctxUnselColBtn = document.getElementById('ctx-unsel-col');
-        this.ctxUnselAllBtn = document.getElementById('ctx-unsel-all');
-        this.ctxSelGlobalStepBtn = document.getElementById('ctx-sel-global');
-        this.ctxUnselGlobalStepBtn = document.getElementById('ctx-unsel-global');
-
-        this.ctxSelNogameStepBtn = document.getElementById('ctx-sel-nogame-step');
-        this.ctxSelNogameColBtn = document.getElementById('ctx-sel-nogame-col');
-        this.ctxSelNogameBarBtn = document.getElementById('ctx-sel-nogame-bar');
-        this.ctxSelNogameGlobalBtn = document.getElementById('ctx-sel-nogame-global');
-
-        this.ctxTarget = null;
         this.longPressTimer = null;
         this.isLongPress = false;
 
@@ -1609,7 +1588,6 @@ class UI {
         this.currentPresetDisplay = document.getElementById('current-preset-name');
 
         this.setupListeners();
-        this.setupContextMenu();
         this.setupPresetListeners();
         this.setupConfigListeners();
         this.initializeConfigContents();
@@ -1881,302 +1859,108 @@ class UI {
         });
     }
 
-    openContextMenu(posX, posY, btn, beatCell) {
-        if (beatCell || btn) {
-            let barIndex = -1;
-            let trackIndex = -1;
-            let beatIndex = -1;
-            let stepIndex = -1;
+    /**
+     * Execute the selected step action based on the dropdown value
+     */
+    executeStepAction(barIndex, trackIndex, beatIndex, stepIndex) {
+        const action = this.stepActionSelect.value;
+        const track = this.seq.bars[barIndex].tracks[trackIndex];
 
-            if (btn) {
-                barIndex = parseInt(btn.dataset.bar);
-                trackIndex = parseInt(btn.dataset.track);
-                beatIndex = parseInt(btn.dataset.beat);
-                stepIndex = parseInt(btn.dataset.step);
+        switch (action) {
+            case 'toggle':
+                this.seq.toggleStep(barIndex, trackIndex, beatIndex, stepIndex);
+                break;
 
-                this.ctxDelBtn.classList.remove('disabled');
-                this.ctxDelBtn.innerText = `指定のステップ${stepIndex + 1}を削除`;
-                this.ctxAddBtn.innerText = `指定のステップ${stepIndex + 1}の右にステップを追加`;
-                this.ctxAddBarBtn.innerText = `Bar${barIndex + 1}全体のステップ${stepIndex + 1}の右にステップを追加`;
-                this.ctxDelBarBtn.innerText = `Bar${barIndex + 1}全体のステップ${stepIndex + 1}を削除`;
-                this.ctxDelAllBtn.innerText = `列全体のステップ${stepIndex + 1}を削除`;
-                this.ctxDelGlobalBtn.innerText = `プロジェクト全体のSTEP${stepIndex + 1}を削除`;
-                this.ctxAddGlobalBtn.innerText = `プロジェクト全体のSTEP${stepIndex + 1}の右にステップを追加`;
-                this.ctxAddAllBtn.innerText = `列全体のSTEP${stepIndex + 1}の右にステップを追加`;
+            // SELECT actions
+            case 'sel-step':
+                this.seq.setStepState(barIndex, trackIndex, beatIndex, stepIndex, true);
+                break;
+            case 'sel-col':
+                this.seq.setColumnAllBarsState(beatIndex, stepIndex, true);
+                break;
+            case 'sel-bar':
+                this.seq.setBarStepState(barIndex, stepIndex, true);
+                break;
+            case 'sel-global':
+                this.seq.setGlobalStepState(stepIndex, true);
+                break;
 
-                this.ctxSelStepBtn.innerText = `指定のステップ${stepIndex + 1}を選択`;
-                this.ctxSelColBtn.innerText = `列全体のステップ${stepIndex + 1}を選択`;
-                this.ctxSelAllBtn.innerText = `Bar${barIndex + 1}全体のステップ${stepIndex + 1}を選択`;
-                this.ctxUnselStepBtn.innerText = `指定のステップ${stepIndex + 1}を選択解除`;
-                this.ctxUnselColBtn.innerText = `列全体のステップ${stepIndex + 1}を選択解除`;
-                this.ctxUnselAllBtn.innerText = `Bar${barIndex + 1}全体のステップ${stepIndex + 1}を選択解除`;
-                this.ctxUnselGlobalStepBtn.innerText = `プロジェクト全体のステップ${stepIndex + 1}を選択解除`;
-                this.ctxSelGlobalStepBtn.innerText = `プロジェクト全体のステップ${stepIndex + 1}を選択`;
+            // SELECT No Game actions
+            case 'sel-nogame-step':
+                this.seq.setStepState(barIndex, trackIndex, beatIndex, stepIndex, 'nogame');
+                break;
+            case 'sel-nogame-col':
+                this.seq.setColumnAllBarsState(beatIndex, stepIndex, 'nogame');
+                break;
+            case 'sel-nogame-bar':
+                this.seq.setBarStepState(barIndex, stepIndex, 'nogame');
+                break;
+            case 'sel-nogame-global':
+                this.seq.setGlobalStepState(stepIndex, 'nogame');
+                break;
 
-                this.ctxSelNogameStepBtn.innerText = `指定のステップ${stepIndex + 1}を選択`;
-                this.ctxSelNogameColBtn.innerText = `列全体のステップ${stepIndex + 1}を選択`;
-                this.ctxSelNogameBarBtn.innerText = `Bar${barIndex + 1}全体のステップ${stepIndex + 1}を選択`;
-                this.ctxSelNogameGlobalBtn.innerText = `プロジェクト全体のステップ${stepIndex + 1}を選択`;
+            // UNSELECT actions
+            case 'unsel-step':
+                this.seq.setStepState(barIndex, trackIndex, beatIndex, stepIndex, false);
+                break;
+            case 'unsel-col':
+                this.seq.setColumnAllBarsState(beatIndex, stepIndex, false);
+                break;
+            case 'unsel-bar':
+                this.seq.setBarStepState(barIndex, stepIndex, false);
+                break;
+            case 'unsel-global':
+                this.seq.setGlobalStepState(stepIndex, false);
+                break;
 
-                this.ctxDelAllBtn.classList.remove('disabled');
-                this.ctxDelBarBtn.classList.remove('disabled');
-                this.ctxDelGlobalBtn.classList.remove('disabled');
-                this.ctxAddGlobalBtn.classList.remove('disabled');
-                this.ctxSelStepBtn.classList.remove('disabled');
-                this.ctxSelColBtn.classList.remove('disabled');
-                this.ctxSelAllBtn.classList.remove('disabled');
-                this.ctxUnselStepBtn.classList.remove('disabled');
-                this.ctxUnselColBtn.classList.remove('disabled');
-                this.ctxUnselAllBtn.classList.remove('disabled');
-                this.ctxSelGlobalStepBtn.classList.remove('disabled');
-                this.ctxUnselGlobalStepBtn.classList.remove('disabled');
+            // ADD STEP actions
+            case 'add-step':
+                this.seq.insertStep(barIndex, beatIndex, stepIndex);
+                break;
+            case 'add-col':
+                this.seq.insertStepAllBars(beatIndex, stepIndex);
+                break;
+            case 'add-bar':
+                this.seq.insertStepBar(barIndex, stepIndex);
+                break;
+            case 'add-global':
+                this.seq.insertStepGlobal(stepIndex);
+                break;
 
-                this.ctxSelNogameStepBtn.classList.remove('disabled');
-                this.ctxSelNogameColBtn.classList.remove('disabled');
-                this.ctxSelNogameBarBtn.classList.remove('disabled');
-                this.ctxSelNogameGlobalBtn.classList.remove('disabled');
-            } else if (beatCell) {
-                const firstBtn = beatCell.querySelector('.step-btn');
-                if (firstBtn) {
-                    barIndex = parseInt(firstBtn.dataset.bar);
-                    beatIndex = parseInt(firstBtn.dataset.beat);
-                }
-                stepIndex = -1;
-                trackIndex = -1;
-                this.ctxDelBtn.classList.add('disabled');
-                this.ctxDelBtn.innerText = "選択箇所を削除";
-                this.ctxAddBtn.innerText = "指定のステップの右に追加";
-                this.ctxAddBarBtn.innerText = `Bar${barIndex + 1}全体のステップの右にステップを追加`;
-                this.ctxDelBarBtn.innerText = `Bar${barIndex + 1}全体のステップを削除`;
-                this.ctxDelAllBtn.innerText = "列全体の指定ステップを削除";
-                this.ctxDelGlobalBtn.innerText = "全ての拍の同位置を削除";
-                this.ctxAddGlobalBtn.innerText = "全ての拍の末尾にステップを追加";
-                this.ctxAddAllBtn.innerText = "列全体にステップを右に追加";
+            // DELETE STEP actions
+            case 'del-step':
+                this.seq.removeStep(barIndex, beatIndex, stepIndex);
+                break;
+            case 'del-col':
+                this.seq.removeStepAllBars(beatIndex, stepIndex);
+                break;
+            case 'del-bar':
+                this.seq.removeStepBar(barIndex, stepIndex);
+                break;
+            case 'del-global':
+                this.seq.removeStepGlobal(stepIndex);
+                break;
+        }
 
-                this.ctxSelStepBtn.innerText = "指定のステップを選択";
-                this.ctxSelColBtn.innerText = "列全体のステップを選択";
-                this.ctxSelAllBtn.innerText = "Bar全体のステップを選択";
-                this.ctxUnselStepBtn.innerText = "指定のステップを選択解除";
-                this.ctxUnselColBtn.innerText = "列全体のステップを選択解除";
-                this.ctxUnselAllBtn.innerText = "Bar全体のステップを選択解除";
-                this.ctxSelGlobalStepBtn.innerText = "プロジェクト全体のステップを選択";
-                this.ctxUnselGlobalStepBtn.innerText = "プロジェクト全体のステップを選択解除";
+        // Determine if action requires full grid re-render
+        // Actions that affect multiple cells or grid structure need re-render
+        const needsRerender = action.startsWith('add-') ||
+            action.startsWith('del-') ||
+            action.endsWith('-col') ||
+            action.endsWith('-bar') ||
+            action.endsWith('-global');
 
-                this.ctxSelNogameStepBtn.innerText = "指定のステップを選択";
-                this.ctxSelNogameColBtn.innerText = "列全体のステップを選択";
-                this.ctxSelNogameBarBtn.innerText = "Bar全体のステップを選択";
-                this.ctxSelNogameGlobalBtn.innerText = "プロジェクト全体のステップを選択";
-
-                this.ctxDelAllBtn.classList.add('disabled');
-                this.ctxDelBarBtn.classList.add('disabled');
-                this.ctxDelGlobalBtn.classList.add('disabled');
-                this.ctxAddGlobalBtn.classList.remove('disabled');
-                this.ctxSelStepBtn.classList.add('disabled');
-                this.ctxSelColBtn.classList.add('disabled');
-                this.ctxSelAllBtn.classList.add('disabled');
-                this.ctxUnselStepBtn.classList.add('disabled');
-                this.ctxUnselColBtn.classList.add('disabled');
-                this.ctxUnselAllBtn.classList.add('disabled');
-                this.ctxSelGlobalStepBtn.classList.add('disabled');
-                this.ctxUnselGlobalStepBtn.classList.add('disabled');
-
-                this.ctxSelNogameStepBtn.classList.add('disabled');
-                this.ctxSelNogameColBtn.classList.add('disabled');
-                this.ctxSelNogameBarBtn.classList.add('disabled');
-                this.ctxSelNogameGlobalBtn.classList.add('disabled');
-            }
-
-            this.ctxTarget = { bar: barIndex, track: trackIndex, beat: beatIndex, step: stepIndex };
-
-            this.ctxMenu.classList.remove('hidden');
-            const menuWidth = this.ctxMenu.offsetWidth;
-            const menuHeight = this.ctxMenu.offsetHeight;
-
-            let finalX = posX;
-            let finalY = posY;
-
-            if (finalX + menuWidth > window.innerWidth) {
-                finalX = window.innerWidth - menuWidth - 10;
-            }
-            if (finalY + menuHeight > window.innerHeight) {
-                finalY = window.innerHeight - menuHeight - 10;
-            }
-
-            finalX = Math.max(10, finalX);
-            finalY = Math.max(10, finalY);
-
-            this.ctxMenu.style.left = `${finalX}px`;
-            this.ctxMenu.style.top = `${finalY}px`;
+        if (needsRerender) {
+            this.renderGrid();
+            return null;
+        } else {
+            // For single-step toggle/select actions, just update UI without full re-render
+            const updatedState = track.pattern[beatIndex] ? track.pattern[beatIndex][stepIndex] : false;
+            return updatedState;
         }
     }
 
-    setupContextMenu() {
-        document.addEventListener('click', (e) => {
-            if (!this.ctxMenu.classList.contains('hidden')) {
-                this.ctxMenu.classList.add('hidden');
-            }
-        });
 
-        const handleTrigger = (e) => {
-            const isTouch = e.type === 'touchstart';
-            const clientX = isTouch ? e.touches[0].clientX : e.clientX;
-            const clientY = isTouch ? e.touches[0].clientY : e.clientY;
-
-            const btn = e.target.closest('.step-btn');
-            const beatCell = e.target.closest('.beat-cell');
-
-            if (isTouch) {
-                if (this.longPressTimer) clearTimeout(this.longPressTimer);
-                this.longPressTimer = setTimeout(() => {
-                    this.isLongPress = true;
-                    if (navigator.vibrate) navigator.vibrate(50);
-                    this.openContextMenu(clientX, clientY, btn, beatCell);
-                }, 600);
-            } else if (e.type === 'contextmenu') {
-                e.preventDefault();
-                this.openContextMenu(clientX, clientY, btn, beatCell);
-            }
-        };
-
-        this.grid.addEventListener('contextmenu', handleTrigger);
-        this.grid.addEventListener('touchstart', handleTrigger, { passive: true });
-
-        this.grid.addEventListener('touchend', (e) => {
-            if (this.longPressTimer) {
-                clearTimeout(this.longPressTimer);
-                this.longPressTimer = null;
-            }
-            if (this.isLongPress) {
-                // Prevent the subsequent 'click' event if we just did a long press
-                e.preventDefault();
-                // Reset a bit later to allow click event to be ignored elsewhere if needed
-                setTimeout(() => { this.isLongPress = false; }, 100);
-            }
-        }, { passive: false });
-
-        this.grid.addEventListener('touchmove', () => {
-            if (this.longPressTimer) {
-                clearTimeout(this.longPressTimer);
-                this.longPressTimer = null;
-            }
-        });
-
-        this.ctxAddBtn.addEventListener('click', () => {
-            const t = this.ctxTarget;
-            console.log("UI: Add Step Clicked", t);
-            // Allow stepIndex -1 if we want to support adding to the end of a beatCell click
-            if (t.bar !== -1 && t.beat !== -1) {
-                this.seq.insertStep(t.bar, t.beat, t.step);
-                this.renderGrid();
-            }
-            this.ctxMenu.classList.add('hidden');
-        });
-
-        this.ctxAddBarBtn.addEventListener('click', () => {
-            const t = this.ctxTarget;
-            console.log("UI: Add Step Bar Clicked", t);
-            if (t.bar !== -1) {
-                this.seq.insertStepBar(t.bar, t.step);
-                this.renderGrid();
-            }
-            this.ctxMenu.classList.add('hidden');
-        });
-
-        this.ctxAddAllBtn.addEventListener('click', () => {
-            const t = this.ctxTarget;
-            console.log("UI: Add Step All Clicked", t);
-            if (t.beat !== -1) {
-                this.seq.insertStepAllBars(t.beat, t.step);
-                this.renderGrid();
-            }
-            this.ctxMenu.classList.add('hidden');
-        });
-
-        this.ctxAddGlobalBtn.addEventListener('click', () => {
-            const t = this.ctxTarget;
-            console.log("UI: Add Step Global Clicked", t);
-            this.seq.insertStepGlobal(t.step);
-            this.renderGrid();
-            this.ctxMenu.classList.add('hidden');
-        });
-
-        this.ctxDelBtn.addEventListener('click', () => {
-            const t = this.ctxTarget;
-            console.log("UI: Del Step Clicked", t);
-            if (t.bar !== -1 && t.beat !== -1 && t.step !== -1) {
-                this.seq.removeStep(t.bar, t.beat, t.step);
-                this.renderGrid();
-            }
-            this.ctxMenu.classList.add('hidden');
-        });
-
-        this.ctxDelAllBtn.addEventListener('click', () => {
-            const t = this.ctxTarget;
-            console.log("UI: Del Step All Clicked", t);
-            if (t.beat !== -1 && t.step !== -1) {
-                this.seq.removeStepAllBars(t.beat, t.step);
-                this.renderGrid();
-            }
-            this.ctxMenu.classList.add('hidden');
-        });
-
-        this.ctxDelBarBtn.addEventListener('click', () => {
-            const t = this.ctxTarget;
-            console.log("UI: Del Step Bar Clicked", t);
-            if (t.bar !== -1 && t.step !== -1) {
-                this.seq.removeStepBar(t.bar, t.step);
-                this.renderGrid();
-            }
-            this.ctxMenu.classList.add('hidden');
-        });
-
-        this.ctxDelGlobalBtn.addEventListener('click', () => {
-            const t = this.ctxTarget;
-            console.log("UI: Del Step Global Clicked", t);
-            if (t.step !== -1) {
-                this.seq.removeStepGlobal(t.step);
-                this.renderGrid();
-            }
-            this.ctxMenu.classList.add('hidden');
-        });
-
-        // New Selection Helpers
-        const setupSelItem = (id, action, state) => {
-            document.getElementById(id).addEventListener('click', () => {
-                const t = this.ctxTarget;
-                if (action === 'step' && t.bar !== -1 && t.track !== -1 && t.beat !== -1 && t.step !== -1) {
-                    this.seq.setStepState(t.bar, t.track, t.beat, t.step, state);
-                } else if (action === 'col' && t.beat !== -1 && t.step !== -1) {
-                    // "Whole column" selection should be global across bars to match other column actions
-                    this.seq.setColumnAllBarsState(t.beat, t.step, state);
-                } else if (action === 'all' && t.bar !== -1 && t.step !== -1) {
-                    // "Whole Bar Step" selection (locally labeled 'all') should target the current bar's specific step
-                    this.seq.setBarStepState(t.bar, t.step, state);
-                } else if (action === 'global-step' && t.step !== -1) {
-                    this.seq.setGlobalStepState(t.step, state);
-                } else if (action === 'all' && t.bar !== -1) {
-                    // Fallback to older Bar Selection if for some reason step is -1
-                    this.seq.setBarState(t.bar, state);
-                }
-                this.renderGrid();
-                this.ctxMenu.classList.add('hidden');
-            });
-        };
-
-        setupSelItem('ctx-sel-step', 'step', true);
-        setupSelItem('ctx-sel-col', 'col', true);
-        setupSelItem('ctx-sel-all', 'all', true);
-        setupSelItem('ctx-sel-global', 'global-step', true);
-        setupSelItem('ctx-unsel-step', 'step', false);
-        setupSelItem('ctx-unsel-col', 'col', false);
-        setupSelItem('ctx-unsel-all', 'all', false);
-        setupSelItem('ctx-unsel-global', 'global-step', false);
-
-        setupSelItem('ctx-sel-nogame-step', 'step', 'nogame');
-        setupSelItem('ctx-sel-nogame-col', 'col', 'nogame');
-        setupSelItem('ctx-sel-nogame-bar', 'all', 'nogame');
-        setupSelItem('ctx-sel-nogame-global', 'global-step', 'nogame');
-    }
 
     renderGrid() {
         this.grid.innerHTML = '';
@@ -2446,19 +2230,25 @@ class UI {
                             if (this.isLongPress) return;
 
                             if (!this.seq.audio.isInitialized) this.seq.audio.init();
-                            this.seq.toggleStep(barIndex, tIndex, bIndex, s);
 
-                            // Re-check state from sequence and update classes reliably
-                            const updatedState = track.pattern[bIndex][s];
-                            btn.classList.remove('active', 'nogame');
-                            if (updatedState === 'nogame') {
-                                btn.classList.add('nogame');
-                            } else if (updatedState === true) {
-                                btn.classList.add('active');
-                            }
+                            // Execute the selected action from dropdown
+                            const result = this.executeStepAction(barIndex, tIndex, bIndex, s);
 
-                            if (!this.seq.isPlaying && this.stepSoundEnabled) {
-                                this.seq.audio.playInstrument(track.type);
+                            // If action didn't cause re-render, update button state
+                            if (result !== null) {
+                                const updatedState = track.pattern[bIndex][s];
+                                btn.classList.remove('active', 'nogame');
+                                if (updatedState === 'nogame') {
+                                    btn.classList.add('nogame');
+                                } else if (updatedState === true) {
+                                    btn.classList.add('active');
+                                }
+
+                                // Play sound if toggle action was used
+                                const action = this.stepActionSelect.value;
+                                if (action === 'toggle' && !this.seq.isPlaying && this.stepSoundEnabled) {
+                                    this.seq.audio.playInstrument(track.type);
+                                }
                             }
                         });
                         beatCell.appendChild(btn);

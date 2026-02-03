@@ -171,8 +171,42 @@
                     <span id="current-preset-name" class="info-value">None</span>
                 </div>
 
-                <div class="control-group">
-                    <!-- Right side placeholder for balance if needed -->
+                <div class="control-group step-action-dropdown">
+                    <label for="step-action-select">Action:</label>
+                    <select id="step-action-select" class="select-input">
+                        <optgroup label="Select/Unselect">
+                            <option value="toggle">Select/Unselect</option>
+                        <optgroup label="SELECT">
+                            <option value="sel-step">Select Step</option>
+                            <option value="sel-col">Select Column</option>
+                            <option value="sel-bar">Select Bar</option>
+                            <option value="sel-global">Select Global</option>
+                        </optgroup>
+                        <optgroup label="SELECT(Exclude from Game)">
+                            <option value="sel-nogame-step">Select Step(Exclude from Game)</option>
+                            <option value="sel-nogame-col">Select Column(Exclude from Game)</option>
+                            <option value="sel-nogame-bar">Select Bar(Exclude from Game)</option>
+                            <option value="sel-nogame-global">Select Globa(Exclude from Game)</option>
+                        </optgroup>
+                        <optgroup label="UNSELECT">
+                            <option value="unsel-step">Unselect Step</option>
+                            <option value="unsel-col">Unselect Column</option>
+                            <option value="unsel-bar">Unselect Bar</option>
+                            <option value="unsel-global">Unselect Global</option>
+                        </optgroup>
+                        <optgroup label="ADD STEP">
+                            <option value="add-step">Add Step</option>
+                            <option value="add-col">Add Column</option>
+                            <option value="add-bar">Add Bar</option>
+                            <option value="add-global">Add Global</option>
+                        </optgroup>
+                        <optgroup label="DELETE STEP">
+                            <option value="del-step">Delete Step</option>
+                            <option value="del-col">Delete Column</option>
+                            <option value="del-bar">Delete Bar</option>
+                            <option value="del-global">Delete Global</option>
+                        </optgroup>
+                    </select>
                 </div>
             </div>
 
@@ -205,37 +239,7 @@
         </main>
     </div>
 
-    <div id="context-menu" class="hidden">
-        <div class="menu-item disabled"><strong>SELECT</strong></div>
-        <div class="menu-item" id="ctx-sel-step">Step</div>
-        <div class="menu-item" id="ctx-sel-col">Column</div>
-        <div class="menu-item" id="ctx-sel-all">Bar</div>
-        <div class="menu-item" id="ctx-sel-global">Global</div>
-        <hr class="menu-sep">
-        <div class="menu-item disabled"><strong>SELECT(Doesn't reflect in the game)</strong></div>
-        <div class="menu-item" id="ctx-sel-nogame-step">Step</div>
-        <div class="menu-item" id="ctx-sel-nogame-col">Column</div>
-        <div class="menu-item" id="ctx-sel-nogame-bar">Bar</div>
-        <div class="menu-item" id="ctx-sel-nogame-global">Global</div>
-        <hr class="menu-sep">
-        <div class="menu-item disabled"><strong>UNSELECT</strong></div>
-        <div class="menu-item" id="ctx-unsel-step">Step</div>
-        <div class="menu-item" id="ctx-unsel-col">Column</div>
-        <div class="menu-item" id="ctx-unsel-all">Bar</div>
-        <div class="menu-item" id="ctx-unsel-global">Global</div>
-        <hr class="menu-sep">
-        <div class="menu-item disabled"><strong>ADD STEP</strong></div>
-        <div class="menu-item" id="ctx-add-step">Right (Step)</div>
-        <div class="menu-item" id="ctx-add-step-all">Right (Column)</div>
-        <div class="menu-item" id="ctx-add-step-bar">Right (Bar)</div>
-        <div class="menu-item" id="ctx-add-step-global">Right (Global)</div>
-        <hr class="menu-sep">
-        <div class="menu-item disabled"><strong>DELETE STEP</strong></div>
-        <div class="menu-item" id="ctx-del-step">Current</div>
-        <div class="menu-item" id="ctx-del-step-all">Column</div>
-        <div class="menu-item" id="ctx-del-step-bar">Bar</div>
-        <div class="menu-item" id="ctx-del-step-global">Global</div>
-    </div>
+
     <script src="script.js"></script>
 </body>
 

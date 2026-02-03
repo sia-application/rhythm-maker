@@ -645,46 +645,55 @@ main {
 
 
 
-/* Context Menu */
-#context-menu {
-    position: fixed;
-    background: #1a1d26;
-    border: 1px solid var(--glass-border);
-    border-radius: 8px;
-    padding: 3px 0;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
-    z-index: 1000;
-    min-width: 140px;
+/* Step Action Dropdown */
+.step-action-dropdown {
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
-#context-menu.hidden {
-    display: none;
-}
-
-.menu-item {
-    padding: 4px 12px;
-    cursor: pointer;
+.step-action-dropdown label {
     font-size: 0.8rem;
-    color: var(--text-main);
-}
-
-.menu-item:hover {
-    background: rgba(255, 255, 255, 0.1);
-}
-
-.menu-item.disabled {
-    color: #8b9bb4;
-    pointer-events: none;
-    opacity: 0.9;
-    font-size: 0.75rem;
-    padding-top: 6px;
+    font-weight: 600;
+    color: var(--text-muted);
     letter-spacing: 0.5px;
 }
 
-.menu-sep {
-    border: none;
-    border-top: 1px solid var(--glass-border);
-    margin: 4px 0;
+.step-action-dropdown .select-input {
+    background: rgba(0, 0, 0, 0.4);
+    color: var(--text-main);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 0.8rem;
+    font-family: 'Inter', sans-serif;
+    cursor: pointer;
+    outline: none;
+    transition: all 0.2s ease;
+    min-width: 180px;
+}
+
+.step-action-dropdown .select-input:hover {
+    border-color: var(--primary-color);
+    background: rgba(0, 242, 255, 0.05);
+}
+
+.step-action-dropdown .select-input:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 10px var(--primary-glow);
+}
+
+.step-action-dropdown .select-input optgroup {
+    background: #1a1d26;
+    color: var(--text-muted);
+    font-weight: 600;
+    font-size: 0.75rem;
+}
+
+.step-action-dropdown .select-input option {
+    background: #1a1d26;
+    color: var(--text-main);
+    padding: 4px 8px;
 }
 
 .beat-value-display {
@@ -1744,15 +1753,6 @@ main {
         font-size: 8rem;
     }
 
-    /* Context Menu */
-    #context-menu {
-        max-width: 90vw;
-        font-size: 0.85rem;
-    }
-
-    .menu-item {
-        padding: 12px 16px;
-    }
 }
 
 /* Small mobile devices */
