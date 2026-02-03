@@ -346,6 +346,21 @@ class Sequencer {
         }
     }
 
+    toggleStepNoGame(barIndex, trackIndex, beatIndex, stepIndex) {
+        if (this.bars[barIndex] && this.bars[barIndex].tracks[trackIndex]) {
+            const pattern = this.bars[barIndex].tracks[trackIndex].pattern;
+            if (pattern[beatIndex]) {
+                const current = pattern[beatIndex][stepIndex];
+                // Toggle between false and 'nogame'
+                if (current === 'nogame') {
+                    pattern[beatIndex][stepIndex] = false;
+                } else {
+                    pattern[beatIndex][stepIndex] = 'nogame';
+                }
+            }
+        }
+    }
+
     addBeat(barIndex) {
         if (!this.bars[barIndex]) return;
         const bar = this.bars[barIndex];
@@ -1931,6 +1946,9 @@ class UI {
         switch (action) {
             case 'toggle':
                 this.seq.toggleStep(barIndex, trackIndex, beatIndex, stepIndex);
+                break;
+            case 'toggle-nogame':
+                this.seq.toggleStepNoGame(barIndex, trackIndex, beatIndex, stepIndex);
                 break;
 
             // SELECT actions
