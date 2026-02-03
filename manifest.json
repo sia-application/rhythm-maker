@@ -2,7 +2,6 @@
   "name": "Rhythm Maker PRO",
   "short_name": "RhythmMaker",
   "description": "A powerful and sleek rhythm sequencer for musicians and pro gamers.",
-  "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#0f1115",
   "theme_color": "#00f2ff",
