@@ -40,61 +40,65 @@
                 <button id="config-panel-close" class="preset-close-btn">✕</button>
             </div>
 
-            <div class="config-section">
-                <h3>RHYTHM CONFIG</h3>
-                <div class="config-item">
-                    <label>BPM</label>
-                    <div class="input-row">
-                        <input type="number" id="config-bpm-number" min="20" max="999" value="120" class="number-input">
-                        <input type="range" id="config-bpm-input" min="20" max="999" value="120">
+            <div class="config-scroll-area">
+                <div class="config-section">
+                    <h3>RHYTHM CONFIG</h3>
+                    <div class="config-item">
+                        <label>BPM</label>
+                        <div class="input-row">
+                            <input type="number" id="config-bpm-number" min="20" max="999" value="120"
+                                class="number-input">
+                            <input type="range" id="config-bpm-input" min="20" max="999" value="120">
+                        </div>
+                    </div>
+                    <div class="config-item">
+                        <label>Volume</label>
+                        <div class="input-row">
+                            <input type="number" id="config-vol-number" min="0" max="500" value="50"
+                                class="number-input">
+                            <input type="range" id="config-master-vol" min="0" max="5" step="0.01" value="0.5"
+                                class="range-input">
+                        </div>
+                    </div>
+                    <div class="config-item">
+                        <label>Time Sig</label>
+                        <select id="config-time-sig-select" class="select-input"></select>
+                    </div>
+                    <div class="config-item">
+                        <label>Subdivision</label>
+                        <select id="config-subdiv-select" class="select-input"></select>
+                    </div>
+                    <div class="config-item">
+                        <label>Playback</label>
+                        <select id="config-playback-mode-select" class="select-input"></select>
+                    </div>
+                    <div class="config-item">
+                        <label>Step Sound</label>
+                        <select id="config-step-sound-select" class="select-input"></select>
+                    </div>
+                    <div class="config-item">
+                        <label>Selected Notes</label>
+                        <div class="input-row">
+                            <button id="config-reset-btn" class="action-btn">Reset</button>
+                        </div>
                     </div>
                 </div>
-                <div class="config-item">
-                    <label>Volume</label>
-                    <div class="input-row">
-                        <input type="number" id="config-vol-number" min="0" max="500" value="50" class="number-input">
-                        <input type="range" id="config-master-vol" min="0" max="5" step="0.01" value="0.5"
-                            class="range-input">
-                    </div>
-                </div>
-                <div class="config-item">
-                    <label>Time Sig</label>
-                    <select id="config-time-sig-select" class="select-input"></select>
-                </div>
-                <div class="config-item">
-                    <label>Subdivision</label>
-                    <select id="config-subdiv-select" class="select-input"></select>
-                </div>
-                <div class="config-item">
-                    <label>Playback</label>
-                    <select id="config-playback-mode-select" class="select-input"></select>
-                </div>
-                <div class="config-item">
-                    <label>Step Sound</label>
-                    <select id="config-step-sound-select" class="select-input"></select>
-                </div>
-                <div class="config-item">
-                    <label>Selected Notes</label>
-                    <div class="input-row">
-                        <button id="config-reset-btn" class="action-btn">Reset</button>
-                    </div>
-                </div>
-            </div>
 
-            <div class="config-section">
-                <h3>GAME CONFIG</h3>
-                <div class="config-item">
-                    <label>Speed: <span id="config-game-speed-val">1.0</span></label>
-                    <input type="range" id="config-game-speed-slider" min="0.5" max="10" step="0.5" value="1.0">
-                </div>
-                <div class="config-item">
-                    <label>Hit Criteria</label>
-                    <select id="config-hit-criteria-select" class="select-input"></select>
-                </div>
-                <div class="config-item">
-                    <label>Game Results</label>
-                    <div class="input-row">
-                        <button id="config-result-reset-btn" class="action-btn">Reset</button>
+                <div class="config-section">
+                    <h3>GAME CONFIG</h3>
+                    <div class="config-item">
+                        <label>Speed: <span id="config-game-speed-val">1.0</span></label>
+                        <input type="range" id="config-game-speed-slider" min="0.5" max="10" step="0.5" value="1.0">
+                    </div>
+                    <div class="config-item">
+                        <label>Hit Criteria</label>
+                        <select id="config-hit-criteria-select" class="select-input"></select>
+                    </div>
+                    <div class="config-item">
+                        <label>Game Results</label>
+                        <div class="input-row">
+                            <button id="config-result-reset-btn" class="action-btn">Reset</button>
+                        </div>
                     </div>
                 </div>
             </div>
