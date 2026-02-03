@@ -1101,10 +1101,11 @@ class PresetManager {
     }
 
     // Create folder
-    async createFolder(name) {
+    async createFolder(name, shareId = null) {
         try {
             const folder = {
                 name: name,
+                shareId: shareId || null, // Associate with URL parameter for isolation
                 createdAt: firebase.firestore.FieldValue.serverTimestamp()
             };
             const docRef = await this.foldersRef.add(folder);
@@ -1169,12 +1170,13 @@ class PresetManager {
     }
 
     // Save a new preset
-    async savePreset(name, folderId, sequencerData) {
-        console.log('DEBUG: savePreset called with:', { name, folderId, dataKeys: Object.keys(sequencerData) });
+    async savePreset(name, folderId, sequencerData, shareId = null) {
+        console.log('DEBUG: savePreset called with:', { name, folderId, shareId, dataKeys: Object.keys(sequencerData) });
         try {
             const preset = {
                 name: name,
                 folderId: folderId || null,
+                shareId: shareId || null, // Associate with URL parameter for isolation
                 createdAt: firebase.firestore.FieldValue.serverTimestamp(),
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
                 dataJson: JSON.stringify(sequencerData) // Store as JSON string to avoid nested array limitation
@@ -1182,7 +1184,7 @@ class PresetManager {
             console.log('DEBUG: Adding preset to Firestore...');
             const docRef = await this.presetsRef.add(preset);
             console.log('DEBUG: Preset saved successfully with ID:', docRef.id);
-            const created = { id: docRef.id, name, folderId: folderId || null, data: sequencerData, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+            const created = { id: docRef.id, name, folderId: folderId || null, shareId: shareId || null, data: sequencerData, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
             if (this._presetsCache) this._presetsCache.unshift(created);
             return created;
         } catch (e) {
@@ -1705,6 +1707,10 @@ class UI {
         this.saveCancelBtn = document.getElementById('save-cancel-btn');
         this.saveConfirmBtn = document.getElementById('save-confirm-btn');
         this.selectedFolderId = null; // Currently selected folder filter
+
+        // Track current share ID from URL (for isolating presets/projects by URL)
+        const urlParams = new URLSearchParams(window.location.search);
+        this.currentShareId = urlParams.get('s') || null;
 
         // Current Preset Info
         this.currentProjectDisplay = document.getElementById('current-project-name');
@@ -2616,7 +2622,9 @@ class UI {
     }
 
     async updateFolderSelect() {
-        const folders = await this.presetManager.getFolders();
+        const allFolders = await this.presetManager.getFolders();
+        // Filter folders by current shareId
+        const folders = allFolders.filter(f => (f.shareId || null) === this.currentShareId);
         this.presetFolderSelect.innerHTML = '<option value="">Root（No Project）</option>';
         folders.forEach(folder => {
             const option = document.createElement('option');
@@ -2649,7 +2657,7 @@ class UI {
 
         const data = this.seq.serialize();
 
-        await this.presetManager.savePreset(name, folderId, data);
+        await this.presetManager.savePreset(name, folderId, data, this.currentShareId);
         this.closeSaveDialog();
         await this.renderPresetList();
         await this.updateCurrentInfo(name, folderId);
@@ -2677,22 +2685,27 @@ class UI {
             return;
         }
 
-        // Check for duplicate name
+        // Check for duplicate name within the same shareId context
         const existingFolders = await this.presetManager.getFolders();
-        const isDuplicate = existingFolders.some(f => f.name.toLowerCase() === name.toLowerCase());
+        const isDuplicate = existingFolders.some(f =>
+            f.name.toLowerCase() === name.toLowerCase() &&
+            (f.shareId || null) === this.currentShareId
+        );
         if (isDuplicate) {
             alert('同じ名前のProjectは既に存在します');
             this.folderNameInput.focus();
             return;
         }
 
-        await this.presetManager.createFolder(name);
+        await this.presetManager.createFolder(name, this.currentShareId);
         this.hideFolderForm();
         await this.renderFolderList();
     }
 
     async renderFolderList() {
-        const folders = await this.presetManager.getFolders();
+        const allFolders = await this.presetManager.getFolders();
+        // Filter folders by current shareId
+        const folders = allFolders.filter(f => (f.shareId || null) === this.currentShareId);
         this.folderList.innerHTML = '';
 
         // "All" option
@@ -2784,8 +2797,12 @@ class UI {
     }
 
     async renderPresetList() {
-        const allPresets = await this.presetManager.getPresets();
-        const folders = await this.presetManager.getFolders();
+        const allPresetsRaw = await this.presetManager.getPresets();
+        const allFolders = await this.presetManager.getFolders();
+
+        // Filter presets and folders by current shareId
+        const allPresets = allPresetsRaw.filter(p => (p.shareId || null) === this.currentShareId);
+        const folders = allFolders.filter(f => (f.shareId || null) === this.currentShareId);
 
         // Filter by selected folder
         let presets;
