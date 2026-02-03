@@ -1835,18 +1835,19 @@ main {
     }
 
     /* Force Make Tools to stack vertically (Label top, Dropdown bottom) */
+    /* Align with BPM slider by offsetting left (approx button width) */
     .step-action-dropdown {
         flex-direction: column !important;
         align-items: center !important;
         justify-content: center;
         gap: 5px;
-        width: 100%;
-        /* Ensure container takes full width if needed */
+        margin-left: 110px !important;
+        width: calc(100% - 110px) !important;
     }
 
-    /* Dropdown width matches BPM slider (approx width next to buttons) */
+    /* Dropdown fills the new constrained container */
     .step-action-dropdown .select-input {
-        width: calc(100% - 110px) !important;
+        width: 100% !important;
         max-width: none;
         flex: none;
         font-size: 0.8rem;
