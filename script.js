@@ -2438,9 +2438,9 @@ class UI {
 
             const addTrackBtn = document.createElement('button');
             addTrackBtn.innerText = '+ Track';
-            addTrackBtn.className = 'btn-small-action';
-            addTrackBtn.style.fontSize = '0.7rem';
-            addTrackBtn.style.padding = '2px 8px';
+            addTrackBtn.className = 'action-btn track-add-btn';
+            addTrackBtn.style.fontSize = '0.8rem';
+            addTrackBtn.style.padding = '5px 10px';
             addTrackBtn.style.marginTop = '0'; // Override generic
             addTrackBtn.addEventListener('click', () => {
                 this.seq.addTrack(barIndex); // Defaults to metronome
