@@ -613,6 +613,26 @@ main {
     /* Hidden by default */
 }
 
+.btn-icon.loading {
+    opacity: 0.5;
+    cursor: not-allowed;
+    animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+    0% {
+        opacity: 0.5;
+    }
+
+    50% {
+        opacity: 0.3;
+    }
+
+    100% {
+        opacity: 0.5;
+    }
+}
+
 /* Show on label hover */
 .grid-row-label:hover .track-del-btn {
     opacity: 1;
@@ -1399,7 +1419,14 @@ main {
 
 .btn-icon:hover {
     background: rgba(255, 255, 255, 0.1);
-    border: 1px solid var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+.btn-icon:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+    filter: grayscale(1);
+    pointer-events: none;
 }
 
 .share-url-display {

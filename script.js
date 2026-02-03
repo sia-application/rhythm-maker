@@ -2916,6 +2916,12 @@ class UI {
     }
 
     async generateShareUrl() {
+        // Prevent multiple clicks
+        if (this.generateUrlBtn) {
+            this.generateUrlBtn.disabled = true;
+            this.generateUrlBtn.classList.add('loading');
+        }
+
         try {
             // Show loading state
             if (this.shareUrlInput) {
@@ -2960,6 +2966,24 @@ class UI {
                 this.shareUrlInput.value = 'Error: Failed to generate URL';
             }
             alert('Failed to generate share URL');
+            // Re-enable only on error so they can try again if it failed
+            if (this.generateUrlBtn) {
+                this.generateUrlBtn.disabled = false;
+                this.generateUrlBtn.classList.remove('loading');
+            }
+        } finally {
+            // Remove loading state if success (but keep disabled)
+            if (this.generateUrlBtn && !this.generateUrlBtn.disabled) {
+                // This block only runs if we didn't hit the error re-enable
+                // But wait, the standard logic is:
+                // Start: disable + loading
+                // Error: enable + remove loading
+                // Success: keep disabled + remove loading
+            }
+            if (this.generateUrlBtn) {
+                this.generateUrlBtn.classList.remove('loading');
+                // We DON'T set disabled = false here to satisfy "stays disabled until reload"
+            }
         }
     }
 
