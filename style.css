@@ -1780,6 +1780,15 @@ main {
         justify-content: center;
     }
 
+    .current-preset-info {
+        position: static;
+        transform: none;
+        width: 100%;
+        justify-content: center;
+        margin: 5px 0;
+        left: auto;
+    }
+
     /* Reset button */
     .action-btn {
         width: 100%;
