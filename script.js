@@ -1716,9 +1716,13 @@ class UI {
         this.setupConfigListeners();
         this.setupShareUrlListeners();
         this.initializeConfigContents();
-        this.loadFromUrlParams(); // Load from URL if params exist
-        this.renderGrid();
-        console.log("UI: Initialized successfully");
+
+        // Initialize async operations
+        (async () => {
+            await this.loadFromUrlParams(); // Load from URL if params exist
+            this.renderGrid();
+            console.log("UI: Initialized successfully");
+        })();
     }
 
     initializeConfigContents() {
@@ -2866,46 +2870,50 @@ class UI {
         }
     }
 
-    generateShareUrl() {
+    async generateShareUrl() {
         try {
-            // Create compact data format with short keys
+            // Show loading state
+            if (this.shareUrlInput) {
+                this.shareUrlInput.value = 'Generating...';
+            }
+
+            // Get sequencer data
             const data = this.seq.serialize();
-            const compact = {
-                b: data.bpm,
-                t: data.timeSignature,
-                p: data.playbackMode === 'loop' ? 1 : 0,
-                r: data.bars.map(bar => ({
-                    e: bar.beats.map(b => b.subdivision),
-                    k: bar.tracks.map(track => ({
-                        y: track.type,
-                        v: Math.round(track.volume * 10) / 10,
-                        n: track.pattern.map(bp =>
-                            bp.map(s => s === true ? 1 : s === 'nogame' ? 2 : 0).join('')
-                        ).join(',')
-                    }))
-                }))
+
+            // Generate a short unique ID (8 characters)
+            const generateShortId = () => {
+                const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+                let result = '';
+                for (let i = 0; i < 8; i++) {
+                    result += chars.charAt(Math.floor(Math.random() * chars.length));
+                }
+                return result;
             };
 
-            const jsonStr = JSON.stringify(compact);
-            console.log('Generating URL with compact data:', compact);
-            console.log('JSON Length:', jsonStr.length);
+            const shareId = generateShortId();
 
-            // Encode to Base64 (handling Unicode)
-            const base64 = btoa(unescape(encodeURIComponent(jsonStr)));
+            // Save to Firestore (convert to JSON string to avoid nested array limitation)
+            await db.collection('shares').doc(shareId).set({
+                dataJson: JSON.stringify(data),
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
 
-            // Build URL
+            // Build short URL
             const url = new URL(window.location.href);
             url.search = ''; // Clear existing params
-            url.searchParams.set('d', base64);  // Use shorter param name
+            url.searchParams.set('s', shareId);  // Use 's' for share ID
 
             // Display URL
             if (this.shareUrlInput) {
                 this.shareUrlInput.value = url.toString();
             }
 
-            console.log('Share URL generated (compact format)');
+            console.log('Share URL generated with Firebase ID:', shareId);
         } catch (error) {
             console.error('Error generating share URL:', error);
+            if (this.shareUrlInput) {
+                this.shareUrlInput.value = 'Error: Failed to generate URL';
+            }
             alert('Failed to generate share URL');
         }
     }
@@ -2950,9 +2958,41 @@ class UI {
         }
     }
 
-    loadFromUrlParams() {
+    async loadFromUrlParams() {
         try {
             const urlParams = new URLSearchParams(window.location.search);
+
+            // Check for new Firebase share ID format first
+            const shareId = urlParams.get('s');
+            if (shareId) {
+                console.log('Loading from Firebase share ID:', shareId);
+                const doc = await db.collection('shares').doc(shareId).get();
+                if (doc.exists) {
+                    const shareData = doc.data();
+                    // Parse JSON string (stored this way to avoid Firestore nested array limitation)
+                    const parsedData = JSON.parse(shareData.dataJson);
+                    this.seq.deserialize(parsedData);
+
+                    // Update UI controls
+                    this.bpmInput.value = this.seq.bpm;
+                    if (this.bpmNumber) this.bpmNumber.value = this.seq.bpm;
+                    if (this.configBpmInput) this.configBpmInput.value = this.seq.bpm;
+                    if (this.configBpmNumber) this.configBpmNumber.value = this.seq.bpm;
+                    if (this.configTimeSigSelect) this.configTimeSigSelect.value = this.seq.timeSignature;
+                    if (this.configPlaybackModeSelect) this.configPlaybackModeSelect.value = this.seq.playbackMode;
+
+                    console.log('Loaded from Firebase share');
+                    this.updatePresetPanelVisibility(true);
+                    return;
+                } else {
+                    console.error('Share not found:', shareId);
+                    alert('Shared content not found');
+                    this.updatePresetPanelVisibility(false);
+                    return;
+                }
+            }
+
+            // Fallback to legacy Base64 formats
             let dataParam = urlParams.get('d');  // New short param
             let isCompact = true;
 
@@ -3006,7 +3046,7 @@ class UI {
             if (this.configTimeSigSelect) this.configTimeSigSelect.value = this.seq.timeSignature;
             if (this.configPlaybackModeSelect) this.configPlaybackModeSelect.value = this.seq.playbackMode;
 
-            console.log('Loaded from URL parameters');
+            console.log('Loaded from URL parameters (legacy format)');
             this.updatePresetPanelVisibility(true); // Parameter exists -> Shared Mode
         } catch (error) {
             console.error('Error loading from URL params:', error);

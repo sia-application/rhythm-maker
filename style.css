@@ -1246,6 +1246,28 @@ main {
     gap: 5px;
     max-height: 150px;
     overflow-y: auto;
+    margin-right: -6px;
+    /* Pull right edge to align with button */
+    padding-right: 6px;
+    /* Add padding to prevent content overlap */
+}
+
+/* Custom scrollbar for folder list */
+.folder-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.folder-list::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.folder-list::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 3px;
+}
+
+.folder-list::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.3);
 }
 
 .folder-item {
@@ -1315,6 +1337,25 @@ main {
     flex: 1;
     padding: 15px 20px;
     overflow-y: auto;
+}
+
+/* Custom scrollbar for preset list */
+.preset-list-section::-webkit-scrollbar {
+    width: 6px;
+}
+
+.preset-list-section::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 3px;
+}
+
+.preset-list-section::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 3px;
+}
+
+.preset-list-section::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.3);
 }
 
 /* Share URL Section */
