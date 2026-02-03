@@ -615,6 +615,68 @@ class Sequencer {
         });
     }
 
+    // Track-specific selection methods
+    // These methods only affect the specified track (by trackIndex within the bar)
+
+    /**
+     * Set state for all steps in a column for a specific track across all bars
+     * Column > Track: Selects/unselects the track's column in all bars
+     */
+    setColumnTrackState(barIndex, trackIndex, beatIndex, stepIndex, state) {
+        console.log(`[Sequencer] setColumnTrackState: Bar ${barIndex}, Track ${trackIndex}, Beat ${beatIndex}, Step ${stepIndex}, State ${state}`);
+        const sourceTrack = this.bars[barIndex]?.tracks[trackIndex];
+        if (!sourceTrack) return;
+
+        // Apply to the same track index across all bars
+        this.bars.forEach(bar => {
+            const track = bar.tracks[trackIndex];
+            if (track && beatIndex < bar.beats.length) {
+                if (track.pattern[beatIndex] && stepIndex < track.pattern[beatIndex].length) {
+                    track.pattern[beatIndex][stepIndex] = state;
+                }
+            }
+        });
+    }
+
+    /**
+     * Set state for all steps of a specific track within a bar
+     * Bar > Track: Selects/unselects all steps of the track in the current bar
+     */
+    setBarTrackState(barIndex, trackIndex, stepIndex, state) {
+        console.log(`[Sequencer] setBarTrackState: Bar ${barIndex}, Track ${trackIndex}, Step ${stepIndex}, State ${state}`);
+        const bar = this.bars[barIndex];
+        if (!bar) return;
+
+        const track = bar.tracks[trackIndex];
+        if (!track) return;
+
+        bar.beats.forEach((beat, beatIndex) => {
+            if (track.pattern[beatIndex] && stepIndex < track.pattern[beatIndex].length) {
+                track.pattern[beatIndex][stepIndex] = state;
+            }
+        });
+    }
+
+    /**
+     * Set state for all steps of a specific track across the entire project
+     * Project > Track: Selects/unselects all steps of the track in all bars
+     */
+    setProjectTrackState(barIndex, trackIndex, stepIndex, state) {
+        console.log(`[Sequencer] setProjectTrackState: Source Bar ${barIndex}, Track ${trackIndex}, Step ${stepIndex}, State ${state}`);
+
+        // Apply to the same track index across all bars
+        this.bars.forEach(bar => {
+            const track = bar.tracks[trackIndex];
+            if (track) {
+                bar.beats.forEach((beat, beatIndex) => {
+                    if (track.pattern[beatIndex] && stepIndex < track.pattern[beatIndex].length) {
+                        track.pattern[beatIndex][stepIndex] = state;
+                    }
+                });
+            }
+        });
+    }
+
     setGlobalState(state) {
         this.bars.forEach(bar => {
             bar.tracks.forEach(track => {
@@ -1878,11 +1940,20 @@ class UI {
             case 'sel-col':
                 this.seq.setColumnAllBarsState(beatIndex, stepIndex, true);
                 break;
+            case 'sel-col-track':
+                this.seq.setColumnTrackState(barIndex, trackIndex, beatIndex, stepIndex, true);
+                break;
             case 'sel-bar':
                 this.seq.setBarStepState(barIndex, stepIndex, true);
                 break;
+            case 'sel-bar-track':
+                this.seq.setBarTrackState(barIndex, trackIndex, stepIndex, true);
+                break;
             case 'sel-global':
                 this.seq.setGlobalStepState(stepIndex, true);
+                break;
+            case 'sel-global-track':
+                this.seq.setProjectTrackState(barIndex, trackIndex, stepIndex, true);
                 break;
 
             // SELECT No Game actions
@@ -1892,11 +1963,20 @@ class UI {
             case 'sel-nogame-col':
                 this.seq.setColumnAllBarsState(beatIndex, stepIndex, 'nogame');
                 break;
+            case 'sel-nogame-col-track':
+                this.seq.setColumnTrackState(barIndex, trackIndex, beatIndex, stepIndex, 'nogame');
+                break;
             case 'sel-nogame-bar':
                 this.seq.setBarStepState(barIndex, stepIndex, 'nogame');
                 break;
+            case 'sel-nogame-bar-track':
+                this.seq.setBarTrackState(barIndex, trackIndex, stepIndex, 'nogame');
+                break;
             case 'sel-nogame-global':
                 this.seq.setGlobalStepState(stepIndex, 'nogame');
+                break;
+            case 'sel-nogame-global-track':
+                this.seq.setProjectTrackState(barIndex, trackIndex, stepIndex, 'nogame');
                 break;
 
             // UNSELECT actions
@@ -1906,11 +1986,20 @@ class UI {
             case 'unsel-col':
                 this.seq.setColumnAllBarsState(beatIndex, stepIndex, false);
                 break;
+            case 'unsel-col-track':
+                this.seq.setColumnTrackState(barIndex, trackIndex, beatIndex, stepIndex, false);
+                break;
             case 'unsel-bar':
                 this.seq.setBarStepState(barIndex, stepIndex, false);
                 break;
+            case 'unsel-bar-track':
+                this.seq.setBarTrackState(barIndex, trackIndex, stepIndex, false);
+                break;
             case 'unsel-global':
                 this.seq.setGlobalStepState(stepIndex, false);
+                break;
+            case 'unsel-global-track':
+                this.seq.setProjectTrackState(barIndex, trackIndex, stepIndex, false);
                 break;
 
             // ADD STEP actions
@@ -1946,9 +2035,9 @@ class UI {
         // Actions that affect multiple cells or grid structure need re-render
         const needsRerender = action.startsWith('add-') ||
             action.startsWith('del-') ||
-            action.endsWith('-col') ||
-            action.endsWith('-bar') ||
-            action.endsWith('-global');
+            action.includes('-col') ||
+            action.includes('-bar') ||
+            action.includes('-global');
 
         if (needsRerender) {
             this.renderGrid();

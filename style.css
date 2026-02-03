@@ -28,7 +28,7 @@ body {
     color: var(--text-main);
     min-height: 100vh;
     overflow-x: auto;
-    overflow-y: hidden;
+    overflow-y: auto;
     /* App-like feel */
 }
 
