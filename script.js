@@ -1077,161 +1077,202 @@ class Sequencer {
 // Preset Manager for saving/loading rhythms
 class PresetManager {
     constructor() {
-        this.PRESETS_KEY = 'rhythmmaker_presets';
-        this.FOLDERS_KEY = 'rhythmmaker_folders';
+        // Firestore references
+        this.presetsRef = db.collection('presets');
+        this.foldersRef = db.collection('folders');
+
+        // Local cache for faster UI updates
+        this._presetsCache = null;
+        this._foldersCache = null;
     }
+
+    // ==================== FOLDERS ====================
 
     // Get all folders
-    getFolders() {
+    async getFolders() {
         try {
-            const data = localStorage.getItem(this.FOLDERS_KEY);
-            return data ? JSON.parse(data) : [];
+            const snapshot = await this.foldersRef.orderBy('createdAt', 'asc').get();
+            this._foldersCache = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            return this._foldersCache;
         } catch (e) {
-            console.error('Error loading folders:', e);
-            return [];
-        }
-    }
-
-    // Save folders
-    saveFolders(folders) {
-        try {
-            localStorage.setItem(this.FOLDERS_KEY, JSON.stringify(folders));
-        } catch (e) {
-            console.error('Error saving folders:', e);
+            console.error('Error loading folders from Firestore:', e);
+            return this._foldersCache || [];
         }
     }
 
     // Create folder
-    createFolder(name) {
-        const folders = this.getFolders();
-        const folder = {
-            id: 'folder_' + Date.now(),
-            name: name,
-            createdAt: new Date().toISOString()
-        };
-        folders.push(folder);
-        this.saveFolders(folders);
-        return folder;
+    async createFolder(name) {
+        try {
+            const folder = {
+                name: name,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            };
+            const docRef = await this.foldersRef.add(folder);
+            const created = { id: docRef.id, ...folder, createdAt: new Date().toISOString() };
+            if (this._foldersCache) this._foldersCache.push(created);
+            return created;
+        } catch (e) {
+            console.error('Error creating folder:', e);
+            return null;
+        }
     }
 
     // Rename folder
-    renameFolder(folderId, newName) {
-        const folders = this.getFolders();
-        const folder = folders.find(f => f.id === folderId);
-        if (folder) {
-            folder.name = newName;
-            this.saveFolders(folders);
+    async renameFolder(folderId, newName) {
+        try {
+            await this.foldersRef.doc(folderId).update({ name: newName });
+            if (this._foldersCache) {
+                const f = this._foldersCache.find(f => f.id === folderId);
+                if (f) f.name = newName;
+            }
+        } catch (e) {
+            console.error('Error renaming folder:', e);
         }
     }
 
     // Delete folder (moves presets to root)
-    deleteFolder(folderId) {
-        const folders = this.getFolders();
-        const index = folders.findIndex(f => f.id === folderId);
-        if (index !== -1) {
-            folders.splice(index, 1);
-            this.saveFolders(folders);
-
+    async deleteFolder(folderId) {
+        try {
+            await this.foldersRef.doc(folderId).delete();
+            if (this._foldersCache) {
+                this._foldersCache = this._foldersCache.filter(f => f.id !== folderId);
+            }
             // Move presets in this folder to root
-            const presets = this.getPresets();
-            presets.forEach(p => {
-                if (p.folderId === folderId) {
-                    p.folderId = null;
-                }
+            const presetsInFolder = await this.presetsRef.where('folderId', '==', folderId).get();
+            const batch = db.batch();
+            presetsInFolder.docs.forEach(doc => {
+                batch.update(doc.ref, { folderId: null });
             });
-            this.savePresets(presets);
+            await batch.commit();
+        } catch (e) {
+            console.error('Error deleting folder:', e);
         }
     }
+
+    // ==================== PRESETS ====================
 
     // Get all presets
-    getPresets() {
+    async getPresets() {
         try {
-            const data = localStorage.getItem(this.PRESETS_KEY);
-            return data ? JSON.parse(data) : [];
+            const snapshot = await this.presetsRef.orderBy('createdAt', 'desc').get();
+            this._presetsCache = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            return this._presetsCache;
         } catch (e) {
-            console.error('Error loading presets:', e);
-            return [];
-        }
-    }
-
-    // Save presets array
-    savePresets(presets) {
-        try {
-            localStorage.setItem(this.PRESETS_KEY, JSON.stringify(presets));
-        } catch (e) {
-            console.error('Error saving presets:', e);
+            console.error('Error loading presets from Firestore:', e);
+            return this._presetsCache || [];
         }
     }
 
     // Save a new preset
-    savePreset(name, folderId, sequencerData) {
-        const presets = this.getPresets();
-        const preset = {
-            id: 'preset_' + Date.now(),
-            name: name,
-            folderId: folderId || null,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            data: sequencerData
-        };
-        presets.push(preset);
-        this.savePresets(presets);
-        return preset;
+    async savePreset(name, folderId, sequencerData) {
+        console.log('DEBUG: savePreset called with:', { name, folderId, dataKeys: Object.keys(sequencerData) });
+        try {
+            const preset = {
+                name: name,
+                folderId: folderId || null,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                data: sequencerData
+            };
+            console.log('DEBUG: Adding preset to Firestore...');
+            const docRef = await this.presetsRef.add(preset);
+            console.log('DEBUG: Preset saved successfully with ID:', docRef.id);
+            const created = { id: docRef.id, ...preset, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+            if (this._presetsCache) this._presetsCache.unshift(created);
+            return created;
+        } catch (e) {
+            console.error('ERROR: Failed to save preset to Firestore:', e);
+            return null;
+        }
     }
 
     // Update an existing preset
-    updatePreset(presetId, sequencerData) {
-        const presets = this.getPresets();
-        const preset = presets.find(p => p.id === presetId);
-        if (preset) {
-            preset.data = sequencerData;
-            preset.updatedAt = new Date().toISOString();
-            this.savePresets(presets);
+    async updatePreset(presetId, sequencerData) {
+        try {
+            await this.presetsRef.doc(presetId).update({
+                data: sequencerData,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            if (this._presetsCache) {
+                const p = this._presetsCache.find(p => p.id === presetId);
+                if (p) {
+                    p.data = sequencerData;
+                    p.updatedAt = new Date().toISOString();
+                }
+            }
+        } catch (e) {
+            console.error('Error updating preset:', e);
         }
     }
 
     // Rename preset
-    renamePreset(presetId, newName) {
-        const presets = this.getPresets();
-        const preset = presets.find(p => p.id === presetId);
-        if (preset) {
-            preset.name = newName;
-            preset.updatedAt = new Date().toISOString();
-            this.savePresets(presets);
+    async renamePreset(presetId, newName) {
+        try {
+            await this.presetsRef.doc(presetId).update({
+                name: newName,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            if (this._presetsCache) {
+                const p = this._presetsCache.find(p => p.id === presetId);
+                if (p) {
+                    p.name = newName;
+                    p.updatedAt = new Date().toISOString();
+                }
+            }
+        } catch (e) {
+            console.error('Error renaming preset:', e);
         }
     }
 
     // Move preset to folder
-    movePreset(presetId, folderId) {
-        const presets = this.getPresets();
-        const preset = presets.find(p => p.id === presetId);
-        if (preset) {
-            preset.folderId = folderId || null;
-            preset.updatedAt = new Date().toISOString();
-            this.savePresets(presets);
+    async movePreset(presetId, folderId) {
+        try {
+            await this.presetsRef.doc(presetId).update({
+                folderId: folderId || null,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            if (this._presetsCache) {
+                const p = this._presetsCache.find(p => p.id === presetId);
+                if (p) {
+                    p.folderId = folderId || null;
+                    p.updatedAt = new Date().toISOString();
+                }
+            }
+        } catch (e) {
+            console.error('Error moving preset:', e);
         }
     }
 
     // Delete preset
-    deletePreset(presetId) {
-        const presets = this.getPresets();
-        const index = presets.findIndex(p => p.id === presetId);
-        if (index !== -1) {
-            presets.splice(index, 1);
-            this.savePresets(presets);
+    async deletePreset(presetId) {
+        try {
+            await this.presetsRef.doc(presetId).delete();
+            if (this._presetsCache) {
+                this._presetsCache = this._presetsCache.filter(p => p.id !== presetId);
+            }
+        } catch (e) {
+            console.error('Error deleting preset:', e);
         }
     }
 
     // Get preset by ID
-    getPreset(presetId) {
-        const presets = this.getPresets();
-        return presets.find(p => p.id === presetId);
+    async getPreset(presetId) {
+        try {
+            const doc = await this.presetsRef.doc(presetId).get();
+            if (doc.exists) {
+                return { id: doc.id, ...doc.data() };
+            }
+            return null;
+        } catch (e) {
+            console.error('Error getting preset:', e);
+            return null;
+        }
     }
 
-    // Get presets by folder
+    // Get presets by folder (uses cache for performance)
     getPresetsByFolder(folderId) {
-        const presets = this.getPresets();
-        return presets.filter(p => p.folderId === folderId);
+        if (!this._presetsCache) return [];
+        return this._presetsCache.filter(p => p.folderId === folderId);
     }
 }
 
@@ -2519,7 +2560,7 @@ class UI {
         this.folderNameInput.value = '';
     }
 
-    openPresetPanel() {
+    async openPresetPanel() {
         this.presetPanel.classList.remove('hidden');
         this.presetOverlay.classList.remove('hidden');
         // Trigger animation
@@ -2527,8 +2568,8 @@ class UI {
             this.presetPanel.classList.add('active');
             this.presetOverlay.classList.add('active');
         });
-        this.renderFolderList();
-        this.renderPresetList();
+        await this.renderFolderList();
+        await this.renderPresetList();
     }
 
     closePresetPanel() {
@@ -2540,9 +2581,9 @@ class UI {
         }, 300);
     }
 
-    openSaveDialog() {
+    async openSaveDialog() {
         this.presetNameInput.value = '';
-        this.updateFolderSelect();
+        await this.updateFolderSelect();
 
         // If a specific project is selected in the sidebar, pre-select it in the dialog
         if (this.selectedFolderId && this.selectedFolderId !== 'root') {
@@ -2565,8 +2606,8 @@ class UI {
         }, 200);
     }
 
-    updateFolderSelect() {
-        const folders = this.presetManager.getFolders();
+    async updateFolderSelect() {
+        const folders = await this.presetManager.getFolders();
         this.presetFolderSelect.innerHTML = '<option value="">Root（No Project）</option>';
         folders.forEach(folder => {
             const option = document.createElement('option');
@@ -2576,7 +2617,7 @@ class UI {
         });
     }
 
-    confirmSavePreset() {
+    async confirmSavePreset() {
         const name = this.presetNameInput.value.trim();
         if (!name) {
             alert('Please enter a preset name');
@@ -2586,19 +2627,19 @@ class UI {
         const folderId = this.presetFolderSelect.value || null;
         const data = this.seq.serialize();
 
-        this.presetManager.savePreset(name, folderId, data);
+        await this.presetManager.savePreset(name, folderId, data);
         this.closeSaveDialog();
-        this.renderPresetList();
-        this.updateCurrentInfo(name, folderId);
+        await this.renderPresetList();
+        await this.updateCurrentInfo(name, folderId);
     }
 
-    updateCurrentInfo(presetName, folderId) {
+    async updateCurrentInfo(presetName, folderId) {
         if (this.currentPresetDisplay) {
             this.currentPresetDisplay.textContent = presetName || 'None';
         }
         if (this.currentProjectDisplay) {
             if (folderId) {
-                const folders = this.presetManager.getFolders();
+                const folders = await this.presetManager.getFolders();
                 const folder = folders.find(f => f.id === folderId);
                 this.currentProjectDisplay.textContent = folder ? folder.name : 'None';
             } else {
@@ -2607,19 +2648,19 @@ class UI {
         }
     }
 
-    createNewFolder() {
+    async createNewFolder() {
         const name = this.folderNameInput.value.trim();
         if (!name) {
             this.folderNameInput.focus();
             return;
         }
-        this.presetManager.createFolder(name);
+        await this.presetManager.createFolder(name);
         this.hideFolderForm();
-        this.renderFolderList();
+        await this.renderFolderList();
     }
 
-    renderFolderList() {
-        const folders = this.presetManager.getFolders();
+    async renderFolderList() {
+        const folders = await this.presetManager.getFolders();
         this.folderList.innerHTML = '';
 
         // "All" option
@@ -2628,10 +2669,10 @@ class UI {
         allItem.innerHTML = `
             <span class="folder-item-name">📂 All</span>
         `;
-        const selectAll = () => {
+        const selectAll = async () => {
             this.selectedFolderId = null;
-            this.renderFolderList();
-            this.renderPresetList();
+            await this.renderFolderList();
+            await this.renderPresetList();
         };
         allItem.addEventListener('click', selectAll);
         allItem.addEventListener('touchend', (e) => { e.preventDefault(); selectAll(); });
@@ -2643,10 +2684,10 @@ class UI {
         rootItem.innerHTML = `
             <span class="folder-item-name">📁 Root (No Project)</span>
         `;
-        const selectRoot = () => {
+        const selectRoot = async () => {
             this.selectedFolderId = 'root';
-            this.renderFolderList();
-            this.renderPresetList();
+            await this.renderFolderList();
+            await this.renderPresetList();
         };
         rootItem.addEventListener('click', selectRoot);
         rootItem.addEventListener('touchend', (e) => { e.preventDefault(); selectRoot(); });
@@ -2664,23 +2705,23 @@ class UI {
             `;
 
             // Click/Touch to filter
-            const selectFolder = (e) => {
+            const selectFolder = async (e) => {
                 if (e.target.classList.contains('folder-action-btn')) return;
                 this.selectedFolderId = folder.id;
-                this.renderFolderList();
-                this.renderPresetList();
+                await this.renderFolderList();
+                await this.renderPresetList();
             };
             item.addEventListener('click', selectFolder);
             item.addEventListener('touchend', (e) => { e.preventDefault(); selectFolder(e); });
 
             // Rename
             const renameBtn = item.querySelector('.rename');
-            const handleRename = (e) => {
+            const handleRename = async (e) => {
                 e.stopPropagation();
                 const newName = prompt('New Project Name:', folder.name);
                 if (newName && newName.trim()) {
-                    this.presetManager.renameFolder(folder.id, newName.trim());
-                    this.renderFolderList();
+                    await this.presetManager.renameFolder(folder.id, newName.trim());
+                    await this.renderFolderList();
                     // If the renamed folder is the current project, update the display
                     if (this.currentProjectDisplay.textContent === folder.name) {
                         this.currentProjectDisplay.textContent = newName.trim();
@@ -2692,15 +2733,15 @@ class UI {
 
             // Delete
             const deleteBtn = item.querySelector('.delete');
-            const handleDelete = (e) => {
+            const handleDelete = async (e) => {
                 e.stopPropagation();
                 if (confirm(`Delete Project「${folder.name}」?\n（Presets in this project will be moved to the root）`)) {
-                    this.presetManager.deleteFolder(folder.id);
+                    await this.presetManager.deleteFolder(folder.id);
                     if (this.selectedFolderId === folder.id) {
                         this.selectedFolderId = null;
                     }
-                    this.renderFolderList();
-                    this.renderPresetList();
+                    await this.renderFolderList();
+                    await this.renderPresetList();
                 }
             };
             deleteBtn.addEventListener('click', handleDelete);
@@ -2710,9 +2751,9 @@ class UI {
         });
     }
 
-    renderPresetList() {
-        const allPresets = this.presetManager.getPresets();
-        const folders = this.presetManager.getFolders();
+    async renderPresetList() {
+        const allPresets = await this.presetManager.getPresets();
+        const folders = await this.presetManager.getFolders();
 
         // Filter by selected folder
         let presets;
@@ -2760,12 +2801,12 @@ class UI {
 
             // Rename
             const renameBtn = item.querySelector('.rename');
-            const handleRename = (e) => {
+            const handleRename = async (e) => {
                 e.stopPropagation();
                 const newName = prompt('New Preset Name:', preset.name);
                 if (newName && newName.trim()) {
-                    this.presetManager.renamePreset(preset.id, newName.trim());
-                    this.renderPresetList();
+                    await this.presetManager.renamePreset(preset.id, newName.trim());
+                    await this.renderPresetList();
                 }
             };
             renameBtn.addEventListener('click', handleRename);
@@ -2773,11 +2814,11 @@ class UI {
 
             // Delete
             const deleteBtn = item.querySelector('.delete');
-            const handleDelete = (e) => {
+            const handleDelete = async (e) => {
                 e.stopPropagation();
                 if (confirm(`Delete preset "${preset.name}"?`)) {
-                    this.presetManager.deletePreset(preset.id);
-                    this.renderPresetList();
+                    await this.presetManager.deletePreset(preset.id);
+                    await this.renderPresetList();
                 }
             };
             deleteBtn.addEventListener('click', handleDelete);
