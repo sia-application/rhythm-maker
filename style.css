@@ -54,6 +54,19 @@ body {
     padding: 0 10px;
 }
 
+.header-controls {
+    display: flex;
+    gap: 10px;
+}
+
+.header-controls button {
+    width: 120px;
+    white-space: nowrap;
+    justify-content: center;
+    display: flex;
+    align-items: center;
+}
+
 h1 {
     font-weight: 800;
     letter-spacing: 2px;
