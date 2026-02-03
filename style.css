@@ -1790,6 +1790,42 @@ main {
         order: -1;
     }
 
+    /* Stack BPM Number/Label above Slider, but keep group inline next to buttons */
+    .controls-bar .input-row {
+        display: flex;
+        flex-direction: row;
+        flex-wrap: wrap;
+        /* Allow wrapping for the stack */
+        justify-content: center;
+        align-items: center;
+        gap: 2px;
+        width: auto;
+        flex: 1;
+        /* Take remaining horizontal space */
+        margin-left: 10px !important;
+    }
+
+    /* Force slider to bottom */
+    .controls-bar .input-row #bpm-input {
+        width: 100%;
+        max-width: none;
+        margin-top: 2px;
+        order: 10;
+    }
+
+    /* Keep Label and Number on top */
+    .controls-bar .input-row span,
+    .controls-bar .input-row .number-input {
+        order: 1;
+        margin-right: 5px !important;
+        display: inline;
+    }
+
+    /* Remove margin from number input to tighten gap if needed */
+    .controls-bar .input-row .number-input {
+        margin-right: 0 !important;
+    }
+
     /* Reset button */
     .action-btn {
         width: 100%;
