@@ -10,6 +10,8 @@
     --glass-bg: rgba(255, 255, 255, 0.05);
     --glass-border: rgba(255, 255, 255, 0.1);
     --glass-blur: 10px;
+    --step-size: 48px;
+    --step-gap: 4px;
 }
 
 * {
@@ -415,9 +417,9 @@ main {
 }
 
 .step-btn {
-    width: 48px;
+    width: var(--step-size);
     /* Fixed size based on 16th note feel */
-    height: 48px;
+    height: var(--step-size);
     /* Fixed size based on 16th note feel */
     background: rgba(255, 255, 255, 0.05);
     border-radius: 4px;
@@ -1899,11 +1901,9 @@ main {
     }
 
     /* Smaller step buttons on mobile */
-    .step-btn {
-        width: 36px;
-        height: 36px;
-        min-width: 36px;
-        min-height: 36px;
+    :root {
+        --step-size: 36px;
+        --step-gap: 2px;
     }
 
     .grid-row-label {
@@ -2021,11 +2021,8 @@ main {
         height: 24px;
     }
 
-    .step-btn {
-        width: 30px;
-        height: 30px;
-        min-width: 30px;
-        min-height: 30px;
+    :root {
+        --step-size: 30px;
     }
 
     .track-inst-select {
@@ -2092,9 +2089,8 @@ main {
         height: 20px;
     }
 
-    .step-btn {
-        width: 32px;
-        height: 32px;
+    :root {
+        --step-size: 32px;
     }
 
     /* Game view landscape */

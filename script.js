@@ -2377,8 +2377,8 @@ class UI {
                     const beatCell = document.createElement('div');
                     beatCell.className = 'beat-cell';
                     beatCell.style.display = 'grid';
-                    beatCell.style.gridTemplateColumns = `repeat(${beat.subdivision}, 48px)`;
-                    beatCell.style.gap = '4px';
+                    beatCell.style.gridTemplateColumns = `repeat(${beat.subdivision}, var(--step-size))`;
+                    beatCell.style.gap = 'var(--step-gap)';
 
                     for (let s = 0; s < beat.subdivision; s++) {
                         const btn = document.createElement('div');
