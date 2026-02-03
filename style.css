@@ -1787,6 +1787,7 @@ main {
         justify-content: center;
         margin: 5px 0;
         left: auto;
+        order: -1;
     }
 
     /* Reset button */
