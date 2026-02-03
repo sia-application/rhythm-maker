@@ -1155,7 +1155,12 @@ class PresetManager {
     async getPresets() {
         try {
             const snapshot = await this.presetsRef.orderBy('createdAt', 'desc').get();
-            this._presetsCache = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            this._presetsCache = snapshot.docs.map(doc => {
+                const docData = doc.data();
+                // Parse dataJson back to object for use in the app
+                const data = docData.dataJson ? JSON.parse(docData.dataJson) : docData.data;
+                return { id: doc.id, ...docData, data };
+            });
             return this._presetsCache;
         } catch (e) {
             console.error('Error loading presets from Firestore:', e);
@@ -1172,12 +1177,12 @@ class PresetManager {
                 folderId: folderId || null,
                 createdAt: firebase.firestore.FieldValue.serverTimestamp(),
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-                data: sequencerData
+                dataJson: JSON.stringify(sequencerData) // Store as JSON string to avoid nested array limitation
             };
             console.log('DEBUG: Adding preset to Firestore...');
             const docRef = await this.presetsRef.add(preset);
             console.log('DEBUG: Preset saved successfully with ID:', docRef.id);
-            const created = { id: docRef.id, ...preset, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+            const created = { id: docRef.id, name, folderId: folderId || null, data: sequencerData, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
             if (this._presetsCache) this._presetsCache.unshift(created);
             return created;
         } catch (e) {
@@ -1190,7 +1195,7 @@ class PresetManager {
     async updatePreset(presetId, sequencerData) {
         try {
             await this.presetsRef.doc(presetId).update({
-                data: sequencerData,
+                dataJson: JSON.stringify(sequencerData),
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
             });
             if (this._presetsCache) {
@@ -2629,6 +2634,19 @@ class UI {
         }
 
         const folderId = this.presetFolderSelect.value || null;
+
+        // Check for duplicate name within the same folder
+        const existingPresets = await this.presetManager.getPresets();
+        const isDuplicate = existingPresets.some(p =>
+            p.name.toLowerCase() === name.toLowerCase() &&
+            (p.folderId || null) === folderId
+        );
+        if (isDuplicate) {
+            alert('同じ名前のPresetがこのフォルダ内に既に存在します');
+            this.presetNameInput.focus();
+            return;
+        }
+
         const data = this.seq.serialize();
 
         await this.presetManager.savePreset(name, folderId, data);
@@ -2658,6 +2676,16 @@ class UI {
             this.folderNameInput.focus();
             return;
         }
+
+        // Check for duplicate name
+        const existingFolders = await this.presetManager.getFolders();
+        const isDuplicate = existingFolders.some(f => f.name.toLowerCase() === name.toLowerCase());
+        if (isDuplicate) {
+            alert('同じ名前のProjectは既に存在します');
+            this.folderNameInput.focus();
+            return;
+        }
+
         await this.presetManager.createFolder(name);
         this.hideFolderForm();
         await this.renderFolderList();
