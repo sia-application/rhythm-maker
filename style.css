@@ -1703,10 +1703,11 @@ main {
     }
 
     #view-toggle-btn,
-    #preset-btn {
+    #preset-btn,
+    #config-btn {
         flex: 1;
-        max-width: 150px;
-        padding: 10px 15px;
+        max-width: none;
+        padding: 10px 5px;
         font-size: 0.85rem;
     }
 
