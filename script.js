@@ -1954,9 +1954,11 @@ class UI {
         switch (action) {
             case 'toggle':
                 this.seq.toggleStep(barIndex, trackIndex, beatIndex, stepIndex);
+                console.log(`Debug: Toggled Step [${barIndex},${trackIndex},${beatIndex},${stepIndex}] to ${track.pattern[beatIndex][stepIndex]}`);
                 break;
             case 'toggle-nogame':
                 this.seq.toggleStepNoGame(barIndex, trackIndex, beatIndex, stepIndex);
+                console.log(`Debug: Toggled NoGame Step [${barIndex},${trackIndex},${beatIndex},${stepIndex}] to ${track.pattern[beatIndex][stepIndex]}`);
                 break;
 
             // SELECT actions
@@ -2844,6 +2846,8 @@ class UI {
             };
 
             const jsonStr = JSON.stringify(compact);
+            console.log('Generating URL with compact data:', compact);
+            console.log('JSON Length:', jsonStr.length);
 
             // Encode to Base64 (handling Unicode)
             const base64 = btoa(unescape(encodeURIComponent(jsonStr)));
@@ -3012,4 +3016,18 @@ let ui;
 
 document.addEventListener('DOMContentLoaded', () => {
     ui = new UI(sequencer);
+
+    // Register Service Worker for PWA
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('./sw.js')
+                .then(reg => console.log('PWA: ServiceWorker registration successful with scope: ', reg.scope))
+                .catch(err => console.error('PWA: ServiceWorker registration failed: ', err));
+        });
+    }
+
+    // Disable right-click context menu
+    document.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+    }, false);
 });
