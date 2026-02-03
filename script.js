@@ -2719,8 +2719,31 @@ class UI {
             await this.renderFolderList();
             await this.renderPresetList();
         };
+        // Helper for scroll-safe tap (All)
+        let touchStartAll = { x: 0, y: 0, time: 0 };
+        let isScrollingAll = false;
+
         allItem.addEventListener('click', selectAll);
-        allItem.addEventListener('touchend', (e) => { e.preventDefault(); selectAll(); });
+
+        allItem.addEventListener('touchstart', (e) => {
+            touchStartAll = { x: e.touches[0].clientX, y: e.touches[0].clientY, time: new Date().getTime() };
+            isScrollingAll = false;
+        });
+
+        allItem.addEventListener('touchmove', (e) => {
+            if (Math.abs(e.touches[0].clientX - touchStartAll.x) > 10 ||
+                Math.abs(e.touches[0].clientY - touchStartAll.y) > 10) {
+                isScrollingAll = true;
+            }
+        });
+
+        allItem.addEventListener('touchend', (e) => {
+            const timeDiff = new Date().getTime() - touchStartAll.time;
+            if (!isScrollingAll && timeDiff < 500) {
+                e.preventDefault();
+                selectAll();
+            }
+        });
         this.folderList.appendChild(allItem);
 
         // Root (No Project) Item
@@ -2734,8 +2757,31 @@ class UI {
             await this.renderFolderList();
             await this.renderPresetList();
         };
+        // Helper for scroll-safe tap (Root)
+        let touchStartRoot = { x: 0, y: 0, time: 0 };
+        let isScrollingRoot = false;
+
         rootItem.addEventListener('click', selectRoot);
-        rootItem.addEventListener('touchend', (e) => { e.preventDefault(); selectRoot(); });
+
+        rootItem.addEventListener('touchstart', (e) => {
+            touchStartRoot = { x: e.touches[0].clientX, y: e.touches[0].clientY, time: new Date().getTime() };
+            isScrollingRoot = false;
+        });
+
+        rootItem.addEventListener('touchmove', (e) => {
+            if (Math.abs(e.touches[0].clientX - touchStartRoot.x) > 10 ||
+                Math.abs(e.touches[0].clientY - touchStartRoot.y) > 10) {
+                isScrollingRoot = true;
+            }
+        });
+
+        rootItem.addEventListener('touchend', (e) => {
+            const timeDiff = new Date().getTime() - touchStartRoot.time;
+            if (!isScrollingRoot && timeDiff < 500) {
+                e.preventDefault();
+                selectRoot();
+            }
+        });
         this.folderList.appendChild(rootItem);
 
         folders.forEach(folder => {
@@ -2756,8 +2802,33 @@ class UI {
                 await this.renderFolderList();
                 await this.renderPresetList();
             };
+            let touchStartFolder = { x: 0, y: 0, time: 0 };
+            let isScrollingFolder = false;
+
             item.addEventListener('click', selectFolder);
-            item.addEventListener('touchend', (e) => { e.preventDefault(); selectFolder(e); });
+
+            item.addEventListener('touchstart', (e) => {
+                if (e.target.classList.contains('folder-action-btn')) return;
+                touchStartFolder = { x: e.touches[0].clientX, y: e.touches[0].clientY, time: new Date().getTime() };
+                isScrollingFolder = false;
+            });
+
+            item.addEventListener('touchmove', (e) => {
+                if (isScrollingFolder) return;
+                if (Math.abs(e.touches[0].clientX - touchStartFolder.x) > 10 ||
+                    Math.abs(e.touches[0].clientY - touchStartFolder.y) > 10) {
+                    isScrollingFolder = true;
+                }
+            });
+
+            item.addEventListener('touchend', (e) => {
+                if (e.target.classList.contains('folder-action-btn')) return;
+                const timeDiff = new Date().getTime() - touchStartFolder.time;
+                if (!isScrollingFolder && timeDiff < 500) {
+                    e.preventDefault();
+                    selectFolder(e);
+                }
+            });
 
             // Rename
             const renameBtn = item.querySelector('.rename');
@@ -2845,8 +2916,33 @@ class UI {
                 if (e.target.classList.contains('folder-action-btn')) return;
                 this.loadPreset(preset);
             };
+            let touchStartPreset = { x: 0, y: 0, time: 0 };
+            let isScrollingPreset = false;
+
             item.addEventListener('click', handleLoad);
-            item.addEventListener('touchend', (e) => { e.preventDefault(); handleLoad(e); });
+
+            item.addEventListener('touchstart', (e) => {
+                if (e.target.classList.contains('folder-action-btn')) return;
+                touchStartPreset = { x: e.touches[0].clientX, y: e.touches[0].clientY, time: new Date().getTime() };
+                isScrollingPreset = false;
+            });
+
+            item.addEventListener('touchmove', (e) => {
+                if (isScrollingPreset) return;
+                if (Math.abs(e.touches[0].clientX - touchStartPreset.x) > 10 ||
+                    Math.abs(e.touches[0].clientY - touchStartPreset.y) > 10) {
+                    isScrollingPreset = true;
+                }
+            });
+
+            item.addEventListener('touchend', (e) => {
+                if (e.target.classList.contains('folder-action-btn')) return;
+                const timeDiff = new Date().getTime() - touchStartPreset.time;
+                if (!isScrollingPreset && timeDiff < 500) {
+                    e.preventDefault();
+                    handleLoad(e);
+                }
+            });
 
             // Rename
             const renameBtn = item.querySelector('.rename');
