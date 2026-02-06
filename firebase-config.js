@@ -1,6 +1,6 @@
 // Firebase Configuration
 const firebaseConfig = {
-    apiKey: "AIzaSyBVgnTxz5pOliFVTAsErlGrwF25gW_gvWQ",
+    apiKey: "AIzaSyA_m89xNerDDRkJffihBDI9S6exKg_SCAE",
     authDomain: "rhythm-maker-pro.firebaseapp.com",
     projectId: "rhythm-maker-pro",
     storageBucket: "rhythm-maker-pro.firebasestorage.app",
