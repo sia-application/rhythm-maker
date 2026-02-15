@@ -3979,7 +3979,6 @@ class UI {
                     return true;
                 } else {
                     console.error('Share not found:', shareId);
-                    alert('Shared content not found');
                     this.updatePresetPanelVisibility(false);
                     return false;
                 }
