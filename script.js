@@ -1889,6 +1889,7 @@ class UI {
         this.configOffBeatModeSelect.value = this.seq.offBeatMode ? 'on' : 'off';
         this.configHitSoundSelect.value = this.game.hitSoundEnabled ? 'sound' : 'mute';
         this.configHitSoundTypeSelect.value = this.game.hitSoundType;
+        if (this.stepActionSelect) this.stepActionSelect.value = 'sel-step';
     }
 
     startCountdown(bpm, baseTime = null) {
@@ -2909,20 +2910,15 @@ class UI {
 
         // Check for duplicate name within the same folder
         const existingPresets = await this.presetManager.getPresets();
-        const isDuplicate = existingPresets.some(p =>
+        const existingPreset = existingPresets.find(p =>
             p.name.toLowerCase() === name.toLowerCase() &&
             (p.folderId || null) === folderId
         );
-        if (isDuplicate) {
-            alert('同じ名前のPresetがこのフォルダ内に既に存在します');
-            this.presetNameInput.focus();
-            return;
-        }
 
         const extraData = {
             hitCriteria: this.game.hitCriteria,
             gameSpeed: this.configGameSpeedVal ? parseFloat(this.configGameSpeedVal.textContent) : 1.0,
-            stepAction: this.stepActionSelect ? this.stepActionSelect.value : 'toggle',
+            stepAction: this.stepActionSelect ? this.stepActionSelect.value : 'sel-step',
             score: this.game.scoreEl ? parseInt(this.game.scoreEl.textContent) : 0,
             hits: this.game.hitEl ? parseInt(this.game.hitEl.textContent) : 0,
             totalNotes: this.game.totalNotesEl ? parseInt(this.game.totalNotesEl.textContent) : 0,
@@ -2930,6 +2926,19 @@ class UI {
         };
 
         const data = this.seq.serialize(extraData);
+
+        if (existingPreset) {
+            const confirmed = confirm('同じ名前のPresetがこのフォルダ内に既に存在します。上書きしますか？');
+            if (confirmed) {
+                await this.presetManager.updatePreset(existingPreset.id, data);
+                this.closeSaveDialog();
+                await this.renderPresetList();
+                await this.updateCurrentInfo(name, folderId);
+            } else {
+                this.presetNameInput.focus();
+            }
+            return;
+        }
 
         await this.presetManager.savePreset(name, folderId, data, this.currentShareId);
         this.closeSaveDialog();
@@ -3282,8 +3291,10 @@ class UI {
         }
 
         // Restore UI state
-        if (data.uiState && data.uiState.stepAction && this.stepActionSelect) {
-            this.stepActionSelect.value = data.uiState.stepAction;
+        if (this.stepActionSelect) {
+            this.stepActionSelect.value = (data.uiState && data.uiState.stepAction && data.uiState.stepAction !== 'toggle')
+                ? data.uiState.stepAction
+                : 'sel-step';
         }
 
         // Restore Game results
@@ -3339,7 +3350,7 @@ class UI {
             const extraData = {
                 hitCriteria: this.game.hitCriteria,
                 gameSpeed: this.configGameSpeedVal ? parseFloat(this.configGameSpeedVal.textContent) : 1.0,
-                stepAction: this.stepActionSelect ? this.stepActionSelect.value : 'toggle',
+                stepAction: this.stepActionSelect ? this.stepActionSelect.value : 'sel-step',
                 score: this.game.scoreEl ? parseInt(this.game.scoreEl.textContent) : 0,
                 hits: this.game.hitEl ? parseInt(this.game.hitEl.textContent) : 0,
                 totalNotes: this.game.totalNotesEl ? parseInt(this.game.totalNotesEl.textContent) : 0,
@@ -3480,8 +3491,10 @@ class UI {
                     }
 
                     // Restore UI state
-                    if (parsedData.uiState && parsedData.uiState.stepAction && this.stepActionSelect) {
-                        this.stepActionSelect.value = parsedData.uiState.stepAction;
+                    if (this.stepActionSelect) {
+                        this.stepActionSelect.value = (parsedData.uiState && parsedData.uiState.stepAction && parsedData.uiState.stepAction !== 'toggle')
+                            ? parsedData.uiState.stepAction
+                            : 'sel-step';
                     }
 
                     // Restore Game results

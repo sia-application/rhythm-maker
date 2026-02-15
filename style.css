@@ -790,7 +790,8 @@ main {
     cursor: pointer;
     outline: none;
     transition: all 0.2s ease;
-    width: 260px;
+    width: auto;
+    min-width: 150px;
 }
 
 .step-action-dropdown .select-input:hover {
@@ -1977,8 +1978,8 @@ main {
 
     /* Dropdown fills the new constrained container */
     .step-action-dropdown .select-input {
-        width: 100% !important;
-        max-width: none;
+        width: auto !important;
+        max-width: 90vw;
         flex: none;
         font-size: 0.8rem;
     }

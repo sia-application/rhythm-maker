@@ -1,4 +1,4 @@
-const CACHE_NAME = 'rhythm-maker-pro-v1.5.8';
+const CACHE_NAME = 'rhythm-maker-pro-v1.6.3';
 const ASSETS = [
     './',
     './index.html',
@@ -33,7 +33,7 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
     event.respondWith(
-        caches.match(event.request).then((response) => {
+        caches.match(event.request, { ignoreSearch: true }).then((response) => {
             return response || fetch(event.request, { cache: 'no-cache' });
         })
     );
