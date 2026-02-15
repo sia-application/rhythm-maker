@@ -2099,6 +2099,14 @@ class UI {
             case 'sel-nogame-global-track':
                 this.seq.setProjectTrackState(barIndex, trackIndex, stepIndex, actualState);
                 break;
+            case 'sel-bar-col':
+            case 'sel-nogame-bar-col':
+                this.seq.setColumnState(barIndex, beatIndex, stepIndex, actualState);
+                break;
+            case 'sel-bar-all':
+            case 'sel-nogame-bar-all':
+                this.seq.setBarState(barIndex, actualState);
+                break;
             case 'sel-bar-row':
             case 'sel-nogame-bar-row':
                 this.seq.setBarTrackRowState(barIndex, trackIndex, actualState);

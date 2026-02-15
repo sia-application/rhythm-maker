@@ -199,27 +199,33 @@
                 </div>
 
                 <div class="control-group step-action-dropdown">
-                    <label for="step-action-select">Make Tools</label>
+                    <label for="step-action-select">Step Tools</label>
                     <select id="step-action-select" class="select-input">
                         <optgroup label="Stepの選択/選択解除">
                             <option value="sel-step">1つのみ</option>
                             <option value="sel-col">縦1列全て</option>
+                            <option value="sel-bar-col">Bar内の縦1列全て</option>
                             <option value="sel-col-track">同Track番号の縦1列全て</option>
                             <option value="sel-bar">Bar内の同STEP番号の縦一列全て</option>
                             <option value="sel-bar-track">Bar内の同Trackの同Step番号全て</option>
+                            <option value="sel-global">Project全体の同STEP番号全て</option>
                             <option value="sel-global-track">Project全体の同Trackの同STEP番号全て</option>
-                            <option value="sel-bar-row">Bar内の同Track全て</option>
-                            <option value="sel-global-all">Project全体の全て</option>
+                            <!-- <option value="sel-bar-row">Bar内の同Track全て</option> -->
+                            <!-- <option value="sel-bar-all">Bar内全て</option> -->
+                            <option value="sel-global-all">Project全て</option>
                         </optgroup>
                         <optgroup label="Stepの選択/選択解除(ゲーム反映なし)">
                             <option value="sel-nogame-step">1つのみ</option>
                             <option value="sel-nogame-col">縦1列全て</option>
+                            <option value="sel-nogame-bar-col">Bar内の縦1列全て</option>
                             <option value="sel-nogame-col-track">同Track番号の縦1列全て</option>
                             <option value="sel-nogame-bar">Bar内の同STEP番号の縦一列全て</option>
                             <option value="sel-nogame-bar-track">Bar内の同Trackの同Step番号全て</option>
+                            <option value="sel-nogame-global">Project全体の同STEP番号全て</option>
                             <option value="sel-nogame-global-track">Project全体の同Trackの同STEP番号全て</option>
-                            <option value="sel-bar-row">Bar内の同Track全て</option>
-                            <option value="sel-global-all">Project全体の全て</option>
+                            <!-- <option value="sel-nogame-bar-row">Bar内の同Track全て</option> -->
+                            <!-- <option value="sel-nogame-bar-all">Bar内の全て</option> -->
+                            <option value="sel-nogame-global-all">Project全体の全て</option>
                         </optgroup>
                         <optgroup label="Stepの追加（右）">
                             <option value="add-step">１つのみ</option>
