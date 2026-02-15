@@ -47,10 +47,11 @@ class AudioEngine {
         }
     }
 
-    playTone(time, type, freq, decay, volume = 1.0) {
+    playTone(time, type, freq, decay, volume = 1.0, pan = 0) {
         if (!this.ctx) return;
         const osc = this.ctx.createOscillator();
         const gain = this.ctx.createGain();
+        const panner = this.ctx.createStereoPanner();
 
         osc.type = type;
         osc.frequency.setValueAtTime(freq, time);
@@ -59,11 +60,14 @@ class AudioEngine {
         }
 
         gain.gain.setValueAtTime(0.001, time);
-        gain.gain.exponentialRampToValueAtTime(volume, time + 0.002); // Quick fade-in to avoid snap
+        gain.gain.exponentialRampToValueAtTime(volume, time + 0.002);
         gain.gain.exponentialRampToValueAtTime(0.001, time + decay);
 
+        panner.pan.setValueAtTime(pan, time);
+
         osc.connect(gain);
-        gain.connect(this.masterGain);
+        gain.connect(panner);
+        panner.connect(this.masterGain);
 
         const nodeEntry = { source: osc, gain: gain };
         this.activeNodes.add(nodeEntry);
@@ -73,7 +77,7 @@ class AudioEngine {
         osc.stop(time + decay);
     }
 
-    playNoise(time, decay, volume = 1.0) {
+    playNoise(time, decay, volume = 1.0, pan = 0) {
         if (!this.ctx) return;
         const bufferSize = this.ctx.sampleRate * decay;
         const buffer = this.ctx.createBuffer(1, Math.max(1, bufferSize), this.ctx.sampleRate);
@@ -95,9 +99,13 @@ class AudioEngine {
         gain.gain.exponentialRampToValueAtTime(volume, time + 0.002);
         gain.gain.exponentialRampToValueAtTime(0.001, time + decay);
 
+        const panner = this.ctx.createStereoPanner();
+        panner.pan.setValueAtTime(pan, time);
+
         noise.connect(filter);
         filter.connect(gain);
-        gain.connect(this.masterGain);
+        gain.connect(panner);
+        panner.connect(this.masterGain);
 
         const nodeEntry = { source: noise, gain: gain };
         this.activeNodes.add(nodeEntry);
@@ -131,46 +139,40 @@ class AudioEngine {
         }
     }
 
-    playInstrument(name, time = 0, trackVolume = 1.0) {
+    playInstrument(name, time = 0, trackVolume = 1.0, pan = 0) {
         if (!this.isInitialized) return;
-        // Fallback to now if time is 0 (immediate play)
         const t = time || this.ctx.currentTime;
-
-        // We create a temporary gain node for the instrument play if we want to be precise,
-        // but for simple synthesis, we can pass it down to playTone/playNoise.
-
-        const finalVolume = trackVolume; // The 'trackVolume' parameter represents the track-specific gain
+        const finalVolume = trackVolume;
 
         switch (name) {
-            case 'kick': this.playTone(t, 'sine', 50, 0.3, finalVolume * 1.5); break;
-            case 'bassdrum': this.playTone(t, 'sine', 40, 0.5, finalVolume * 1.8); break;
-            case 'snare': this.playNoise(t, 0.15, finalVolume * 1.2); break;
-            case 'hihat': this.playTone(t, 'square', 8000, 0.05, finalVolume * 0.4); break;
-            case 'openhihat': this.playTone(t, 'square', 8000, 0.3, finalVolume * 0.35); break;
-            case 'pedalhat': this.playTone(t, 'square', 6000, 0.03, finalVolume * 0.3); break;
-            case 'tomH': this.playTone(t, 'sine', 150, 0.2, finalVolume * 1.3); break;
-            case 'tomM': this.playTone(t, 'sine', 120, 0.25, finalVolume * 1.3); break;
-            case 'tomL': this.playTone(t, 'sine', 90, 0.3, finalVolume * 1.3); break;
-            case 'ride': this.playTone(t, 'sawtooth', 4000, 0.6, finalVolume * 0.2); break;
-            case 'crash': this.playNoise(t, 1.5, finalVolume * 0.5); break;
+            case 'kick': this.playTone(t, 'sine', 50, 0.3, finalVolume * 1.5, pan); break;
+            case 'bassdrum': this.playTone(t, 'sine', 40, 0.5, finalVolume * 1.8, pan); break;
+            case 'snare': this.playNoise(t, 0.15, finalVolume * 1.2, pan); break;
+            case 'hihat': this.playTone(t, 'square', 8000, 0.05, finalVolume * 0.4, pan); break;
+            case 'openhihat': this.playTone(t, 'square', 8000, 0.3, finalVolume * 0.35, pan); break;
+            case 'pedalhat': this.playTone(t, 'square', 6000, 0.03, finalVolume * 0.3, pan); break;
+            case 'tomH': this.playTone(t, 'sine', 150, 0.2, finalVolume * 1.3, pan); break;
+            case 'tomM': this.playTone(t, 'sine', 120, 0.25, finalVolume * 1.3, pan); break;
+            case 'tomL': this.playTone(t, 'sine', 90, 0.3, finalVolume * 1.3, pan); break;
+            case 'ride': this.playTone(t, 'sawtooth', 4000, 0.6, finalVolume * 0.2, pan); break;
+            case 'crash': this.playNoise(t, 1.5, finalVolume * 0.5, pan); break;
             case 'clap':
-                // Clap is 3 tiny bursts + 1 decay
                 for (let i = 0; i < 3; i++) {
-                    this.playNoise(t + (i * 0.01), 0.01, finalVolume * 1.0);
+                    this.playNoise(t + (i * 0.01), 0.01, finalVolume * 1.0, pan);
                 }
-                this.playNoise(t + 0.03, 0.3, finalVolume * 1.0);
+                this.playNoise(t + 0.03, 0.3, finalVolume * 1.0, pan);
                 break;
             case 'rim':
-                this.playTone(t, 'sine', 2000, 0.05, finalVolume * 0.8);
+                this.playTone(t, 'sine', 2000, 0.05, finalVolume * 0.8, pan);
                 break;
             case 'cowbell':
-                this.playTone(t, 'sine', 1000, 0.1, finalVolume * 1.2);
+                this.playTone(t, 'sine', 1000, 0.1, finalVolume * 1.2, pan);
                 break;
             case 'shaker':
-                this.playNoise(t, 0.05, finalVolume * 0.7);
+                this.playNoise(t, 0.05, finalVolume * 0.7, pan);
                 break;
             case 'metronome':
-                this.playTone(t, 'square', 1000, 0.05, finalVolume);
+                this.playTone(t, 'square', 1000, 0.05, finalVolume, pan);
                 break;
         }
     }
@@ -253,6 +255,22 @@ class Sequencer {
         });
     }
 
+    changeTrackPan(barIndex, trackIndex, pan) {
+        if (barIndex < 0 || barIndex >= this.bars.length) return;
+        const bar = this.bars[barIndex];
+        if (trackIndex >= 0 && trackIndex < bar.tracks.length) {
+            bar.tracks[trackIndex].pan = pan;
+        }
+    }
+
+    syncTrackPanAcrossBars(trackIndex, pan) {
+        this.bars.forEach(bar => {
+            if (trackIndex >= 0 && trackIndex < bar.tracks.length) {
+                bar.tracks[trackIndex].pan = pan;
+            }
+        });
+    }
+
     addBar() {
         const barId = this.bars.length;
         const bar = {
@@ -265,14 +283,25 @@ class Sequencer {
         for (let i = 0; i < this.timeSignature; i++) {
             bar.beats.push({ subdivision: this.subdivision });
         }
-        // Add default tracks
-        // Default to just last selected instrument (1 track) as requested.
-        const defaultTracks = [this.lastSelectedInstrument];
+        // Add default tracks or inherit from last bar
+        let tracksToCopy = [];
+        if (this.bars.length > 0) {
+            const lastBar = this.bars[this.bars.length - 1];
+            tracksToCopy = lastBar.tracks.map(t => ({
+                type: t.type,
+                volume: t.volume,
+                pan: t.pan
+            }));
+        } else {
+            // First bar default
+            tracksToCopy = [{ type: this.lastSelectedInstrument, volume: 1.0, pan: 0 }];
+        }
 
-        defaultTracks.forEach(type => {
+        tracksToCopy.forEach(tInfo => {
             const track = {
-                type: type,
-                volume: 1.0,
+                type: tInfo.type,
+                volume: tInfo.volume !== undefined ? tInfo.volume : 1.0,
+                pan: tInfo.pan !== undefined ? tInfo.pan : 0,
                 pattern: []
             };
             // Init pattern for each beat
@@ -845,7 +874,7 @@ class Sequencer {
                 const audioDelay = (time - 0.15 - now) * 1000;
                 const aid = setTimeout(() => {
                     if (this.isPlaying) {
-                        this.audio.playInstrument(track.type, time, track.volume);
+                        this.audio.playInstrument(track.type, time, track.volume, track.pan || 0);
                     }
                 }, Math.max(0, audioDelay));
                 this.scheduledTimeouts.push(aid);
@@ -1121,6 +1150,7 @@ class Sequencer {
                 tracks: bar.tracks.map(track => ({
                     type: track.type,
                     volume: track.volume,
+                    pan: track.pan,
                     pattern: track.pattern.map(beatPattern => [...beatPattern])
                 }))
             }))
@@ -1160,7 +1190,8 @@ class Sequencer {
                     tracks: barData.tracks.map(trackData => ({
                         id: this.nextTrackId++,
                         type: trackData.type,
-                        volume: trackData.volume || 1.0,
+                        volume: trackData.volume !== undefined ? trackData.volume : 1.0,
+                        pan: trackData.pan !== undefined ? trackData.pan : 0,
                         pattern: trackData.pattern.map(bp => [...bp])
                     }))
                 };
@@ -1885,6 +1916,9 @@ class UI {
         this.trackDeleteBtn = document.getElementById('track-delete-btn');
         this.syncInstAllBtn = document.getElementById('sync-inst-all-btn');
         this.syncVolAllBtn = document.getElementById('sync-vol-all-btn');
+        this.trackPanNumber = document.getElementById('track-pan-number');
+        this.trackPanRange = document.getElementById('track-pan-range');
+        this.syncPanAllBtn = document.getElementById('sync-pan-all-btn');
 
         this.currentSettingsTrack = null; // { barIndex, trackIndex }
 
@@ -2401,6 +2435,37 @@ class UI {
             const { trackIndex } = this.currentSettingsTrack;
             const vol = parseFloat(this.trackVolRange.value);
             this.seq.syncTrackVolumeAcrossBars(trackIndex, vol);
+            this.markDirty();
+            this.renderGrid();
+            this.saveConfigToFirebase();
+        });
+
+        const updateTrackPan = (val, isSlider) => {
+            if (!this.currentSettingsTrack) return;
+            const { barIndex, trackIndex } = this.currentSettingsTrack;
+
+            let v = parseFloat(val);
+            if (isNaN(v)) return;
+
+            const sliderVal = isSlider ? v : Math.max(-100, Math.min(100, Math.round(v))) / 100;
+            const numberVal = isSlider ? Math.round(v * 100) : Math.max(-100, Math.min(100, Math.round(v)));
+
+            this.trackPanRange.value = sliderVal;
+            this.trackPanNumber.value = numberVal;
+
+            this.seq.changeTrackPan(barIndex, trackIndex, sliderVal);
+            this.markDirty();
+            this.saveConfigToFirebase();
+        };
+
+        this.trackPanRange.addEventListener('input', (e) => updateTrackPan(e.target.value, true));
+        this.trackPanNumber.addEventListener('change', (e) => updateTrackPan(e.target.value, false));
+
+        addTapListener(this.syncPanAllBtn, () => {
+            if (!this.currentSettingsTrack) return;
+            const { trackIndex } = this.currentSettingsTrack;
+            const pan = parseFloat(this.trackPanRange.value);
+            this.seq.syncTrackPanAcrossBars(trackIndex, pan);
             this.markDirty();
             this.renderGrid();
             this.saveConfigToFirebase();
@@ -4038,6 +4103,11 @@ class UI {
         const volPercent = Math.round(track.volume * 100);
         this.trackVolNumber.value = volPercent;
         this.trackVolRange.value = track.volume;
+
+        // Set Panning
+        const panVal = track.pan !== undefined ? track.pan : 0;
+        this.trackPanRange.value = panVal;
+        this.trackPanNumber.value = Math.round(panVal * 100);
 
         // Show Panel
         this.trackSettingsPanel.classList.remove('hidden');
