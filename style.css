@@ -52,6 +52,9 @@ body {
     align-items: center;
     margin-bottom: 20px;
     padding: 0 10px;
+    width: 1200px;
+    margin-left: auto;
+    margin-right: auto;
 }
 
 .header-controls {
@@ -96,7 +99,9 @@ h1 {
     gap: 20px;
     margin-bottom: 20px;
     position: relative;
-    /* Add this for centering info */
+    width: 1200px;
+    margin-left: auto;
+    margin-right: auto;
 }
 
 .current-preset-info {
@@ -336,11 +341,13 @@ main {
 
 .sequencer-container {
     width: fit-content;
-    min-width: 100%;
+    min-width: 1200px;
     height: 100%;
     overflow-y: auto;
     overflow-x: visible;
     position: relative;
+    margin-left: auto;
+    margin-right: auto;
 }
 
 /* Custom Scrollbar for visibility */
