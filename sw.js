@@ -1,4 +1,4 @@
-const CACHE_NAME = 'sw-v4';
+const CACHE_NAME = 'sw-v5';
 const ASSETS = [
     './',
     './index.html',
