@@ -4177,23 +4177,42 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Register Service Worker for PWA
     if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-            navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' })
-                .then(reg => {
-                    console.log('PWA: ServiceWorker registration successful with scope: ', reg.scope);
-                    // Proactively check for updates on every load
-                    reg.update();
-                })
-                .catch(err => console.error('PWA: ServiceWorker registration failed: ', err));
-        });
-
         // Reload the page when a new service worker takes control
         let refreshing = false;
         navigator.serviceWorker.addEventListener('controllerchange', () => {
             if (!refreshing) {
+                console.log("PWA: Controller changed, reloading...");
                 refreshing = true;
                 window.location.reload();
             }
+        });
+
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' })
+                .then(reg => {
+                    console.log('PWA: ServiceWorker registration successful with scope: ', reg.scope);
+
+                    // Logic to handle updates if the worker is already waiting
+                    if (reg.waiting) {
+                        console.log("PWA: ServiceWorker waiting, skipping...");
+                        reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+                    }
+
+                    // Listen for updates
+                    reg.onupdatefound = () => {
+                        const newWorker = reg.installing;
+                        newWorker.onstatechange = () => {
+                            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                console.log("PWA: New version available, skipping waiting...");
+                                newWorker.postMessage({ type: 'SKIP_WAITING' });
+                            }
+                        };
+                    };
+
+                    // Proactively check for updates on every load
+                    reg.update();
+                })
+                .catch(err => console.error('PWA: ServiceWorker registration failed: ', err));
         });
     }
 

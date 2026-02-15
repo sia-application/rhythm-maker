@@ -1,4 +1,4 @@
-const CACHE_NAME = 'sw-v3';
+const CACHE_NAME = 'sw-v4';
 const ASSETS = [
     './',
     './index.html',
@@ -44,4 +44,10 @@ self.addEventListener('fetch', (event) => {
             return response || fetch(event.request, { cache: 'no-cache' });
         })
     );
+});
+
+self.addEventListener('message', (event) => {
+    if (event.data && event.data.type === 'SKIP_WAITING') {
+        self.skipWaiting();
+    }
 });
