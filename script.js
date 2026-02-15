@@ -1175,9 +1175,16 @@ class PresetManager {
         this.presetsRef = db.collection('presets');
         this.foldersRef = db.collection('folders');
 
+        // User ID for ownership tracking
+        this.userId = null;
+
         // Local cache for faster UI updates
         this._presetsCache = null;
         this._foldersCache = null;
+    }
+
+    setUserId(uid) {
+        this.userId = uid;
     }
 
     // ==================== FOLDERS ====================
@@ -1200,6 +1207,7 @@ class PresetManager {
             const folder = {
                 name: name,
                 shareId: shareId || null, // Associate with URL parameter for isolation
+                ownerId: this.userId,     // Track ownership
                 createdAt: firebase.firestore.FieldValue.serverTimestamp()
             };
             const docRef = await this.foldersRef.add(folder);
@@ -1271,6 +1279,7 @@ class PresetManager {
                 name: name,
                 folderId: folderId || null,
                 shareId: shareId || null, // Associate with URL parameter for isolation
+                ownerId: this.userId,     // Track ownership
                 createdAt: firebase.firestore.FieldValue.serverTimestamp(),
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
                 dataJson: JSON.stringify(sequencerData) // Store as JSON string to avoid nested array limitation
@@ -1801,6 +1810,7 @@ class UI {
         this.headerNewProjectBtn = document.getElementById('header-new-project-btn');
         this.presetPanelClose = document.getElementById('preset-panel-close');
 
+        this.userId = null;
         this.hasUnsavedChanges = false;
 
         // Browser-level unsaved changes warning
@@ -1850,12 +1860,26 @@ class UI {
         this.setupShareUrlListeners();
         this.initializeConfigContents();
 
-        // Initialize async operations
-        (async () => {
+        // Immediate initial render (ensures app works while Auth/Presets load)
+        this.renderGrid();
+    }
+
+    async init() {
+        console.log("UI: Starting async data loading...");
+        try {
             await this.loadFromUrlParams(); // Load from URL if params exist
             this.renderGrid();
-            console.log("UI: Initialized successfully");
-        })();
+        } catch (e) {
+            console.error("UI: Error loading from URL params:", e);
+        }
+
+        try {
+            await this.renderPresetList();
+            await this.renderFolderList();
+        } catch (e) {
+            console.error("UI: Error loading presets/folders:", e);
+        }
+        console.log("UI: Async data loading complete for UserID:", this.userId);
     }
 
     initializeConfigContents() {
@@ -3013,7 +3037,6 @@ class UI {
         this.currentPresetName = 'None';
         this.currentFolderId = null;
         this.currentPresetId = null;
-        this.currentShareId = null;
 
         // Clear Sequencer
         this.seq.bars = [];
@@ -3039,12 +3062,6 @@ class UI {
         // Refresh UI
         await this.updateCurrentInfo('None', null);
         this.renderGrid();
-
-        // Clean URL (remove share ID)
-        if (window.history.pushState) {
-            const newurl = window.location.protocol + "//" + window.location.host + window.location.pathname;
-            window.history.pushState({ path: newurl }, '', newurl);
-        }
     }
 
     async updateCurrentInfo(presetName, folderId) {
@@ -3726,12 +3743,28 @@ const sequencer = new Sequencer(audio);
 let ui;
 
 document.addEventListener('DOMContentLoaded', () => {
+    // Initialize UI immediately so buttons and grid work right away
     ui = new UI(sequencer);
+
+    // Handle Auth state changes separately
+    firebase.auth().onAuthStateChanged(async (user) => {
+        if (user) {
+            console.log('PWA: Authenticated as', user.uid);
+            ui.userId = user.uid;
+            ui.presetManager.setUserId(user.uid);
+            await ui.init();
+        } else {
+            console.log('PWA: Not authenticated, signing in anonymously...');
+            firebase.auth().signInAnonymously().catch(err => {
+                console.error('PWA: Anonymous sign-in failed', err);
+            });
+        }
+    });
 
     // Register Service Worker for PWA
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-            navigator.serviceWorker.register('./sw.js')
+            navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' })
                 .then(reg => {
                     console.log('PWA: ServiceWorker registration successful with scope: ', reg.scope);
                     // Proactively check for updates on every load
