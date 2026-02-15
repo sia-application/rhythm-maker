@@ -1945,9 +1945,10 @@ main {
         /* Ensure margin auto works if not flex item, or naturally flows */
     }
 
-    /* Override for +Track and Copy buttons to keep them small and aligned on mobile */
+    /* Override for +Track, Copy, and +Bar buttons to keep them small and aligned on mobile */
     .track-add-btn,
-    .bar-copy-btn {
+    .bar-copy-btn,
+    .bar-add-footer-btn {
         min-width: 0 !important;
         margin: 0 !important;
         display: inline-block !important;

@@ -2685,9 +2685,8 @@ class UI {
 
         const addBarBtn = document.createElement('button');
         addBarBtn.innerText = '+ Bar';
-        addBarBtn.className = 'action-btn';
-        addBarBtn.style.fontSize = '0.8rem';
-        addBarBtn.style.padding = '5px 10px';
+        addBarBtn.className = 'action-btn bar-add-footer-btn';
+        // Removed inline font-size and padding to use class style
         // Removed inline background to use class style
         addBarBtn.addEventListener('click', () => {
             this.seq.addBar();
