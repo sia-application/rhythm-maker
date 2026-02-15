@@ -402,9 +402,6 @@ class Sequencer {
     addBeat(barIndex) {
         if (!this.bars[barIndex]) return;
         const bar = this.bars[barIndex];
-        this.configOffBeatModeSelect.value = this.seq.offBeatMode ? 'on' : 'off';
-
-        // Add Listeners
         bar.beats.push({ subdivision: 4 });
         // Add beat data to tracks
         bar.tracks.forEach(track => {
@@ -1398,6 +1395,8 @@ class RhythmGame {
         this.laneMap = {}; // trackIndex -> laneIndex
         this.isGameMode = false;
         this.hitCriteria = 'great'; // 'nice', 'great', or 'excellent'
+        this.hitSoundEnabled = false;
+        this.hitSoundType = 'metronome';
         this.lastNoteTime = 0;
     }
 
@@ -1636,7 +1635,7 @@ class RhythmGame {
             rating = 'GREAT';
             scoreAdd = 50;
             ratingClass = 'note-great';
-            if (this.hitCriteria === 'nice' || this.hitCriteria === 'great') {
+            if (this.hitCriteria === 'nice' || this.hitCriteria === 'great' || this.hitCriteria === 'excellent') {
                 isHit = true;
             }
         } else if (diff <= 150) {
@@ -1649,6 +1648,11 @@ class RhythmGame {
         } else {
             rating = 'MISS';
             ratingClass = 'note-miss';
+        }
+
+        // Play hit sound if enabled
+        if (isHit && this.hitSoundEnabled) {
+            this.seq.audio.playInstrument(this.hitSoundType);
         }
 
         if (isHit) {
@@ -1770,6 +1774,8 @@ class UI {
         this.configStepSoundSelect = document.getElementById('config-step-sound-select');
         this.configHitCriteriaSelect = document.getElementById('config-hit-criteria-select');
         this.configOffBeatModeSelect = document.getElementById('config-offbeat-mode-select');
+        this.configHitSoundSelect = document.getElementById('config-hit-sound-select');
+        this.configHitSoundTypeSelect = document.getElementById('config-hit-sound-type-select');
 
         this.touchDraggedBarIndex = null;
 
@@ -1867,10 +1873,22 @@ class UI {
             <option value="excellent">EXCELLENT ONLY</option>
         `;
 
+        // Populate Hit Sound Type select
+        this.configHitSoundTypeSelect.innerHTML = '';
+        Object.keys(this.seq.audio.instruments).forEach(inst => {
+            const opt = document.createElement('option');
+            opt.value = inst;
+            opt.innerText = inst.charAt(0).toUpperCase() + inst.slice(1);
+            this.configHitSoundTypeSelect.appendChild(opt);
+        });
+
         // Set initial values
         this.configTimeSigSelect.value = this.seq.timeSignature;
         this.configPlaybackModeSelect.value = this.seq.playbackMode;
         this.configHitCriteriaSelect.value = this.game.hitCriteria;
+        this.configOffBeatModeSelect.value = this.seq.offBeatMode ? 'on' : 'off';
+        this.configHitSoundSelect.value = this.game.hitSoundEnabled ? 'sound' : 'mute';
+        this.configHitSoundTypeSelect.value = this.game.hitSoundType;
     }
 
     startCountdown(bpm, baseTime = null) {
@@ -2069,6 +2087,14 @@ class UI {
         // Step Sound Mode
         this.configOffBeatModeSelect.addEventListener('change', (e) => {
             this.seq.offBeatMode = (e.target.value === 'on');
+        });
+
+        this.configHitSoundSelect.addEventListener('change', (e) => {
+            this.game.hitSoundEnabled = (e.target.value === 'sound');
+        });
+
+        this.configHitSoundTypeSelect.addEventListener('change', (e) => {
+            this.game.hitSoundType = e.target.value;
         });
 
         this.configStepSoundSelect.addEventListener('change', (e) => {
