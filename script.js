@@ -206,6 +206,7 @@ class Sequencer {
     constructor(audioEngine) {
         this.audio = audioEngine;
         this.isPlaying = false;
+        this.offBeatMode = false;
         this.bpm = 120;
         this.timeSignature = 4; // Beats per bar
 
@@ -401,7 +402,9 @@ class Sequencer {
     addBeat(barIndex) {
         if (!this.bars[barIndex]) return;
         const bar = this.bars[barIndex];
-        // Add beat definition
+        this.configOffBeatModeSelect.value = this.seq.offBeatMode ? 'on' : 'off';
+
+        // Add Listeners
         bar.beats.push({ subdivision: 4 });
         // Add beat data to tracks
         bar.tracks.forEach(track => {
@@ -838,10 +841,10 @@ class Sequencer {
         const now = this.audio.ctx.currentTime;
 
         bar.tracks.forEach((track, tIndex) => {
-            if (track.pattern[beatIndex] && track.pattern[beatIndex][stepInBeat]) {
-                // DEFERRED SCHEDULING: 
-                // Don't create AudioNodes until 150ms before playback.
-                // This keeps the AudioContext resource light and prevents memory noise.
+            const hasStep = track.pattern[beatIndex] && track.pattern[beatIndex][stepInBeat];
+
+            if (hasStep) {
+                // SOUND: SCHEDULING
                 const audioDelay = (time - 0.15 - now) * 1000;
                 const aid = setTimeout(() => {
                     if (this.isPlaying) {
@@ -849,10 +852,20 @@ class Sequencer {
                     }
                 }, Math.max(0, audioDelay));
                 this.scheduledTimeouts.push(aid);
+            }
 
-                // Trigger Game Note (Lead-time unchanged so visuals work)
-                // SPEC: 'nogame' notes play sound but don't show up in game mode
-                if (track.pattern[beatIndex][stepInBeat] !== 'nogame' && this.onNoteTrigger) {
+            // GAME NOTE LOGIC
+            if (this.onNoteTrigger) {
+                let shouldSpawn = false;
+                if (this.offBeatMode) {
+                    // Off-Beat Mode: Spawn if NO step exists
+                    shouldSpawn = !hasStep;
+                } else {
+                    // Normal Mode: Spawn if step exists and is NOT nogame
+                    shouldSpawn = hasStep && track.pattern[beatIndex][stepInBeat] !== 'nogame';
+                }
+
+                if (shouldSpawn) {
                     const travelTime = 2.0 / this.noteSpeed;
                     const spawnDelay = (time - travelTime - now) * 1000;
                     const tid = setTimeout(() => {
@@ -1756,6 +1769,7 @@ class UI {
         this.configPlaybackModeSelect = document.getElementById('config-playback-mode-select');
         this.configStepSoundSelect = document.getElementById('config-step-sound-select');
         this.configHitCriteriaSelect = document.getElementById('config-hit-criteria-select');
+        this.configOffBeatModeSelect = document.getElementById('config-offbeat-mode-select');
 
         this.touchDraggedBarIndex = null;
 
@@ -2053,6 +2067,10 @@ class UI {
         });
 
         // Step Sound Mode
+        this.configOffBeatModeSelect.addEventListener('change', (e) => {
+            this.seq.offBeatMode = (e.target.value === 'on');
+        });
+
         this.configStepSoundSelect.addEventListener('change', (e) => {
             this.stepSoundEnabled = (e.target.value === 'sound');
         });
