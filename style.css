@@ -58,6 +58,7 @@ body {
     margin-bottom: 20px;
     padding: 0 10px;
     width: 100%;
+    max-width: 1200px;
     margin-left: auto;
     margin-right: auto;
 }
@@ -105,6 +106,7 @@ h1 {
     margin-bottom: 20px;
     position: relative;
     width: 100%;
+    max-width: 1200px;
     margin-left: auto;
     margin-right: auto;
 }
