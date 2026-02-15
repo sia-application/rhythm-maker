@@ -1848,6 +1848,10 @@ class UI {
         this.currentProjectDisplay = document.getElementById('current-project-name');
         this.currentPresetDisplay = document.getElementById('current-preset-name');
 
+        // Initial UI Visibility State
+        const hasParams = !!(this.currentShareId || urlParams.get('d') || urlParams.get('data'));
+        this.updatePresetPanelVisibility(hasParams);
+
         // Share URL Elements
         this.generateUrlBtn = document.getElementById('generate-url-btn');
         this.shareUrlDisplay = document.getElementById('share-url-display');
@@ -3077,6 +3081,18 @@ class UI {
                 this.currentProjectDisplay.textContent = 'None';
             }
         }
+
+        // Handle header info visibility
+        const urlParams = new URLSearchParams(window.location.search);
+        const hasParams = urlParams.has('s') || urlParams.has('d') || urlParams.has('data');
+        const currentPresetInfo = document.getElementById('current-preset-info');
+        if (currentPresetInfo) {
+            if (hasParams || (presetName && presetName !== 'None')) {
+                currentPresetInfo.classList.remove('hidden');
+            } else {
+                currentPresetInfo.classList.add('hidden');
+            }
+        }
     }
 
     async createNewFolder() {
@@ -3707,11 +3723,13 @@ class UI {
         const presetListSection = this.presetPanel.querySelector('.preset-list-section');
         const shareUrlSection = this.presetPanel.querySelector('.share-url-section');
         const panelTitle = this.presetPanel.querySelector('.preset-panel-header h2');
+        const currentPresetInfo = document.getElementById('current-preset-info');
 
         if (isSharedMode) {
             // Parameter exists: Show Preset functions, Hide Share URL
             this.presetBtn.innerText = 'Preset';
             if (panelTitle) panelTitle.innerText = 'PRESET';
+            if (currentPresetInfo) currentPresetInfo.classList.remove('hidden');
 
             if (presetActions) presetActions.classList.remove('hidden');
             if (presetFolders) presetFolders.classList.remove('hidden');
@@ -3721,6 +3739,11 @@ class UI {
             // No Parameter: Change to Share URL mode
             this.presetBtn.innerText = 'Share URL';
             if (panelTitle) panelTitle.innerText = 'SHARE URL';
+
+            // Hide header info in Standard Mode if no preset is loaded
+            if (currentPresetInfo && (!this.currentPresetName || this.currentPresetName === 'None')) {
+                currentPresetInfo.classList.add('hidden');
+            }
 
             if (presetActions) presetActions.classList.add('hidden');
             if (presetFolders) presetFolders.classList.add('hidden');
