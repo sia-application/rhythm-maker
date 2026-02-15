@@ -296,6 +296,42 @@ class Sequencer {
         }
     }
 
+    moveBar(fromIndex, toIndex) {
+        if (fromIndex < 0 || fromIndex >= this.bars.length) return;
+        if (toIndex < 0 || toIndex >= this.bars.length) return;
+        if (fromIndex === toIndex) return;
+
+        const barToMove = this.bars.splice(fromIndex, 1)[0];
+        this.bars.splice(toIndex, 0, barToMove);
+    }
+
+    duplicateBar(barIndex) {
+        if (barIndex < 0 || barIndex >= this.bars.length) return;
+        const originalBar = this.bars[barIndex];
+
+        // Deep copy the bar structure
+        const newBar = {
+            name: (originalBar.name || "") + " (Copy)",
+            beats: originalBar.beats.map(beat => ({
+                subdivision: beat.subdivision
+            })),
+            tracks: originalBar.tracks.map(track => {
+                const newTrack = {
+                    type: track.type,
+                    volume: track.volume,
+                    mute: track.mute,
+                    solo: track.solo,
+                    // Deep copy pattern data
+                    pattern: track.pattern.map(beatPattern => [...beatPattern])
+                };
+                return newTrack;
+            })
+        };
+
+        this.bars.push(newBar);
+        return newBar;
+    }
+
     addTrack(barIndex, type = null) {
         if (barIndex < 0 || barIndex >= this.bars.length) return;
 
@@ -2175,8 +2211,63 @@ class UI {
             // Container for this Bar
             const systemContainer = document.createElement('div');
             systemContainer.className = 'system-container';
+            systemContainer.dataset.barIndex = barIndex;
             // Added 30px column at the end for the + button
-            systemContainer.style.gridTemplateColumns = `170px repeat(${bar.beats.length}, auto) 30px`;
+            // Increased label column from 170px to 200px to accommodate drag handle
+            systemContainer.style.gridTemplateColumns = `200px repeat(${bar.beats.length}, auto) 30px`;
+
+            // Bar Drag and Drop
+            systemContainer.draggable = true;
+            systemContainer.addEventListener('dragstart', (e) => {
+                // If dragging from an input or something that shouldn't start a bar drag, prevent it
+                if (e.target.tagName === 'INPUT' || e.target.closest('.subdiv-btn') || e.target.closest('.beat-header')) {
+                    // e.preventDefault(); // This might break beat dragging if they are nested
+                    // Actually beatHeader has its own dragstart.
+                    // If e.target is beatHeader, let it bubble? 
+                    // No, we want to distinguish.
+                }
+
+                // Check if we are dragging by the handle (optional but better)
+                // For now, let's allow dragging the whole container unless it's a specific element
+                if (e.target.closest('.beat-header')) return; // Let beat dragging handle it
+
+                e.dataTransfer.setData('application/x-bar-index', barIndex);
+                e.dataTransfer.effectAllowed = 'move';
+                systemContainer.classList.add('dragging-bar');
+
+                // Set drag image if needed, or just let it be
+            });
+
+            systemContainer.addEventListener('dragend', () => {
+                systemContainer.classList.remove('dragging-bar');
+                document.querySelectorAll('.system-container').forEach(el => el.classList.remove('drag-over-bar'));
+            });
+
+            systemContainer.addEventListener('dragover', (e) => {
+                if (!e.dataTransfer.types.includes('application/x-bar-index')) return;
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+                systemContainer.classList.add('drag-over-bar');
+            });
+
+            systemContainer.addEventListener('dragleave', () => {
+                systemContainer.classList.remove('drag-over-bar');
+            });
+
+            systemContainer.addEventListener('drop', (e) => {
+                const fromIndexStr = e.dataTransfer.getData('application/x-bar-index');
+                if (!fromIndexStr) return;
+                e.preventDefault();
+                systemContainer.classList.remove('drag-over-bar');
+
+                const fromIndex = parseInt(fromIndexStr);
+                const toIndex = barIndex;
+
+                if (fromIndex !== toIndex) {
+                    this.seq.moveBar(fromIndex, toIndex);
+                    this.renderGrid();
+                }
+            });
 
             // Delete Bar Button
             const barDelBtn = document.createElement('button');
@@ -2199,6 +2290,16 @@ class UI {
             emptyHeader.style.display = 'flex';
             emptyHeader.style.alignItems = 'center';
             emptyHeader.style.gap = '5px';
+            emptyHeader.style.whiteSpace = 'nowrap';
+            emptyHeader.style.overflow = 'hidden';
+            emptyHeader.style.minWidth = '0';
+
+            // Drag Handle
+            const dragHandle = document.createElement('div');
+            dragHandle.className = 'bar-drag-handle';
+            dragHandle.innerHTML = '&#8942;&#8942;'; // Vertically stacked dots (⋮⋮)
+            dragHandle.title = 'Drag to reorder';
+            emptyHeader.appendChild(dragHandle);
 
             const labelSpan = document.createElement('span');
             labelSpan.innerText = `Bar ${barIndex + 1}`;
@@ -2485,6 +2586,7 @@ class UI {
             addTrackContainer.style.paddingTop = '5px';
             addTrackContainer.style.display = 'flex';
             addTrackContainer.style.justifyContent = 'flex-start';
+            addTrackContainer.style.gap = '10px';
 
             const addTrackBtn = document.createElement('button');
             addTrackBtn.innerText = '+ Track';
@@ -2497,7 +2599,24 @@ class UI {
                 this.renderGrid();
             });
 
+            const copyBarBtn = document.createElement('button');
+            copyBarBtn.innerText = 'Copy';
+            copyBarBtn.className = 'action-btn bar-copy-btn';
+            copyBarBtn.style.fontSize = '0.8rem';
+            copyBarBtn.style.padding = '5px 10px';
+            copyBarBtn.style.marginTop = '0';
+            copyBarBtn.title = 'Duplicate this bar to the end';
+            copyBarBtn.addEventListener('click', () => {
+                this.seq.duplicateBar(barIndex);
+                this.renderGrid();
+                // Scroll to the bottom to see the new bar
+                setTimeout(() => {
+                    this.grid.scrollTop = this.grid.scrollHeight;
+                }, 100);
+            });
+
             addTrackContainer.appendChild(addTrackBtn);
+            addTrackContainer.appendChild(copyBarBtn);
             systemContainer.appendChild(addTrackContainer);
 
             this.grid.appendChild(systemContainer);
