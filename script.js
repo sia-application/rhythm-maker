@@ -674,6 +674,22 @@ class Sequencer {
     }
 
     /**
+     * Set state for ALL steps in a specific track within a bar (entire row)
+     */
+    setBarTrackRowState(barIndex, trackIndex, state) {
+        console.log(`[Sequencer] setBarTrackRowState: Bar ${barIndex}, Track ${trackIndex}, State ${state}`);
+        const bar = this.bars[barIndex];
+        if (!bar) return;
+
+        const track = bar.tracks[trackIndex];
+        if (!track) return;
+
+        track.pattern.forEach(beatPattern => {
+            beatPattern.fill(state);
+        });
+    }
+
+    /**
      * Set state for all steps of a specific track across the entire project
      * Project > Track: Selects/unselects all steps of the track in all bars
      */
@@ -2039,6 +2055,11 @@ class UI {
         const action = this.stepActionSelect.value;
         const track = this.seq.bars[barIndex].tracks[trackIndex];
 
+        const currentState = track.pattern[beatIndex][stepIndex];
+        let targetState = true;
+        if (action.includes('nogame')) targetState = 'nogame';
+        const actualState = (currentState === targetState) ? false : targetState;
+
         switch (action) {
             case 'toggle':
                 this.seq.toggleStep(barIndex, trackIndex, beatIndex, stepIndex);
@@ -2049,73 +2070,42 @@ class UI {
                 console.log(`Debug: Toggled NoGame Step [${barIndex},${trackIndex},${beatIndex},${stepIndex}] to ${track.pattern[beatIndex][stepIndex]}`);
                 break;
 
-            // SELECT actions
+            // SELECT/TOGGLE actions
             case 'sel-step':
-                this.seq.setStepState(barIndex, trackIndex, beatIndex, stepIndex, true);
+            case 'sel-nogame-step':
+                this.seq.setStepState(barIndex, trackIndex, beatIndex, stepIndex, actualState);
                 break;
             case 'sel-col':
-                this.seq.setColumnAllBarsState(beatIndex, stepIndex, true);
+            case 'sel-nogame-col':
+                this.seq.setColumnAllBarsState(beatIndex, stepIndex, actualState);
                 break;
             case 'sel-col-track':
-                this.seq.setColumnTrackState(barIndex, trackIndex, beatIndex, stepIndex, true);
+            case 'sel-nogame-col-track':
+                this.seq.setColumnTrackState(barIndex, trackIndex, beatIndex, stepIndex, actualState);
                 break;
             case 'sel-bar':
-                this.seq.setBarStepState(barIndex, stepIndex, true);
+            case 'sel-nogame-bar':
+                this.seq.setBarStepState(barIndex, stepIndex, actualState);
                 break;
             case 'sel-bar-track':
-                this.seq.setBarTrackState(barIndex, trackIndex, stepIndex, true);
+            case 'sel-nogame-bar-track':
+                this.seq.setBarTrackState(barIndex, trackIndex, stepIndex, actualState);
                 break;
             case 'sel-global':
-                this.seq.setGlobalStepState(stepIndex, true);
+            case 'sel-nogame-global':
+                this.seq.setGlobalStepState(stepIndex, actualState);
                 break;
             case 'sel-global-track':
-                this.seq.setProjectTrackState(barIndex, trackIndex, stepIndex, true);
-                break;
-
-            // SELECT No Game actions
-            case 'sel-nogame-step':
-                this.seq.setStepState(barIndex, trackIndex, beatIndex, stepIndex, 'nogame');
-                break;
-            case 'sel-nogame-col':
-                this.seq.setColumnAllBarsState(beatIndex, stepIndex, 'nogame');
-                break;
-            case 'sel-nogame-col-track':
-                this.seq.setColumnTrackState(barIndex, trackIndex, beatIndex, stepIndex, 'nogame');
-                break;
-            case 'sel-nogame-bar':
-                this.seq.setBarStepState(barIndex, stepIndex, 'nogame');
-                break;
-            case 'sel-nogame-bar-track':
-                this.seq.setBarTrackState(barIndex, trackIndex, stepIndex, 'nogame');
-                break;
-            case 'sel-nogame-global':
-                this.seq.setGlobalStepState(stepIndex, 'nogame');
-                break;
             case 'sel-nogame-global-track':
-                this.seq.setProjectTrackState(barIndex, trackIndex, stepIndex, 'nogame');
+                this.seq.setProjectTrackState(barIndex, trackIndex, stepIndex, actualState);
                 break;
-
-            // UNSELECT actions
-            case 'unsel-step':
-                this.seq.setStepState(barIndex, trackIndex, beatIndex, stepIndex, false);
+            case 'sel-bar-row':
+            case 'sel-nogame-bar-row':
+                this.seq.setBarTrackRowState(barIndex, trackIndex, actualState);
                 break;
-            case 'unsel-col':
-                this.seq.setColumnAllBarsState(beatIndex, stepIndex, false);
-                break;
-            case 'unsel-col-track':
-                this.seq.setColumnTrackState(barIndex, trackIndex, beatIndex, stepIndex, false);
-                break;
-            case 'unsel-bar':
-                this.seq.setBarStepState(barIndex, stepIndex, false);
-                break;
-            case 'unsel-bar-track':
-                this.seq.setBarTrackState(barIndex, trackIndex, stepIndex, false);
-                break;
-            case 'unsel-global':
-                this.seq.setGlobalStepState(stepIndex, false);
-                break;
-            case 'unsel-global-track':
-                this.seq.setProjectTrackState(barIndex, trackIndex, stepIndex, false);
+            case 'sel-global-all':
+            case 'sel-nogame-global-all':
+                this.seq.setGlobalState(actualState);
                 break;
 
             // ADD STEP actions
