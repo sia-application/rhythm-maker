@@ -209,6 +209,7 @@ class Sequencer {
         this.offBeatMode = false;
         this.bpm = 120;
         this.timeSignature = 4; // Beats per bar
+        this.subdivision = 4;   // Global default subdivision
 
         // Data Structure:
         // this.bars = [ 
@@ -262,9 +263,9 @@ class Sequencer {
             beats: [],
             tracks: []
         };
-        // Default: 4 beats, subdivision 4
+        // Default: timeSignature beats, using global subdivision
         for (let i = 0; i < this.timeSignature; i++) {
-            bar.beats.push({ subdivision: 4 });
+            bar.beats.push({ subdivision: this.subdivision });
         }
         // Add default tracks
         // Default to just last selected instrument (1 track) as requested.
@@ -277,8 +278,8 @@ class Sequencer {
                 pattern: []
             };
             // Init pattern for each beat
-            bar.beats.forEach(() => {
-                track.pattern.push(new Array(4).fill(false));
+            bar.beats.forEach((beat) => {
+                track.pattern.push(new Array(beat.subdivision).fill(false));
             });
             bar.tracks.push(track);
         });
@@ -402,10 +403,11 @@ class Sequencer {
     addBeat(barIndex) {
         if (!this.bars[barIndex]) return;
         const bar = this.bars[barIndex];
-        bar.beats.push({ subdivision: 4 });
+        const sub = this.subdivision;
+        bar.beats.push({ subdivision: sub });
         // Add beat data to tracks
         bar.tracks.forEach(track => {
-            track.pattern.push(new Array(4).fill(false));
+            track.pattern.push(new Array(sub).fill(false));
         });
     }
 
@@ -1947,6 +1949,7 @@ class UI {
                 const shareOverride = await this.presetManager.getUserConfig(this.currentShareId);
                 if (shareOverride) {
                     this.applyConfig(shareOverride);
+                    this.renderGrid(); // Force re-render after config
                 }
             } else {
                 console.log("UI: No share detected, using factory defaults for main page");
@@ -2017,10 +2020,12 @@ class UI {
         }
 
         if (config.sd) {
-            if (this.configSubdivSelect) this.configSubdivSelect.value = config.sd;
+            const sdVal = parseInt(config.sd);
+            if (this.configSubdivSelect) this.configSubdivSelect.value = sdVal;
+            this.seq.subdivision = sdVal; // Sync global setting
             this.seq.bars.forEach((bar, barIndex) => {
                 for (let i = 0; i < bar.beats.length; i++) {
-                    this.seq.updateBeatSubdivision(barIndex, i, config.sd);
+                    this.seq.updateBeatSubdivision(barIndex, i, sdVal);
                 }
             });
         }
@@ -2302,6 +2307,7 @@ class UI {
         // Subdivision
         this.configSubdivSelect.addEventListener('change', (e) => {
             const val = parseInt(e.target.value);
+            this.seq.subdivision = val; // Store globally
             this.seq.bars.forEach((bar, barIndex) => {
                 for (let i = 0; i < bar.beats.length; i++) {
                     this.seq.updateBeatSubdivision(barIndex, i, val);
