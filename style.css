@@ -476,8 +476,41 @@ main {
     transform: scale(1.1);
 }
 
-.grid-row-label.clickable {
-    cursor: pointer;
+.grid-row-label.bar-header-label {
+    flex-direction: row;
+    justify-content: flex-start;
+    align-items: center;
+    gap: 8px;
+    padding-left: 10px;
+    color: #8b9bb4;
+    font-size: 0.9rem;
+}
+
+.grid-row-label.step-value-label {
+    margin-top: 5px;
+    height: 24px;
+    /* Adjusted to match beat-value-display height better */
+    box-sizing: border-box;
+    padding-bottom: 0px;
+    padding-top: 0px;
+}
+
+.bar-name-input {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    color: var(--text-main);
+    padding: 2px 6px;
+    font-size: 0.75rem;
+    width: 80px;
+    transition: all 0.2s;
+}
+
+.bar-name-input:focus {
+    outline: none;
+    background: rgba(255, 255, 255, 0.1);
+    border-color: var(--primary-color);
+    width: 120px;
 }
 
 .grid-row-label.clickable:hover {

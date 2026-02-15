@@ -2764,7 +2764,7 @@ class UI {
 
             // 1. Header (Subdivision)
             const emptyHeader = document.createElement('div');
-            emptyHeader.className = 'grid-row-label';
+            emptyHeader.className = 'grid-row-label bar-header-label';
             emptyHeader.style.color = '#8b9bb4';
             emptyHeader.style.fontSize = '0.9rem';
             emptyHeader.style.paddingLeft = '5px';
@@ -2951,9 +2951,8 @@ class UI {
 
             // 2. Step Value Row (Formerly 3. Footer row)
             const valLabel = document.createElement('div');
-            valLabel.className = 'grid-row-label step-value-label';
+            valLabel.className = 'grid-row-label bar-header-label step-value-label';
             valLabel.innerText = 'Step Value';
-            valLabel.style.fontSize = '0.9rem';
             systemContainer.appendChild(valLabel);
 
             bar.beats.forEach((beat) => {
