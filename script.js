@@ -3003,6 +3003,20 @@ class UI {
                     this.openTrackSettings(barIndex, tIndex);
                 });
 
+                // Track Label Delete Button
+                const delTrackBtn = document.createElement('button');
+                delTrackBtn.className = 'track-label-delete';
+                delTrackBtn.innerText = '×';
+                delTrackBtn.title = 'Delete Track';
+                delTrackBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.seq.removeTrack(barIndex, tIndex);
+                    this.renderGrid();
+                    this.markDirty();
+                    this.saveConfigToFirebase();
+                });
+                labelCell.appendChild(delTrackBtn);
+
                 const trackNameLabel = document.createElement('span');
                 trackNameLabel.innerText = `Track ${tIndex + 1}`;
                 trackNameLabel.className = 'track-number-label';

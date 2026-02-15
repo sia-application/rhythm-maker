@@ -440,6 +440,40 @@ main {
     background: rgba(255, 255, 255, 0.02);
     user-select: none;
     transition: background 0.2s ease;
+    position: relative;
+    /* Anchor for delete button */
+}
+
+.track-label-delete {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    width: 20px;
+    height: 20px;
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--text-muted);
+    border: none;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.9rem;
+    line-height: 1;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    opacity: 0;
+    /* Only show on hover */
+    z-index: 5;
+}
+
+.grid-row-label:hover .track-label-delete {
+    opacity: 1;
+}
+
+.track-label-delete:hover {
+    background: rgba(255, 255, 255, 0.2);
+    color: #fff;
+    transform: scale(1.1);
 }
 
 .grid-row-label.clickable {
