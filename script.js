@@ -136,67 +136,41 @@ class AudioEngine {
         // Fallback to now if time is 0 (immediate play)
         const t = time || this.ctx.currentTime;
 
-        // Apply track volume if needed. 
         // We create a temporary gain node for the instrument play if we want to be precise,
         // but for simple synthesis, we can pass it down to playTone/playNoise.
 
-        const v = trackVolume;
+        const finalVolume = trackVolume; // The 'trackVolume' parameter represents the track-specific gain
 
         switch (name) {
-            case 'kick':
-                this.playTone(t, 'sine', 150, 0.5, v);
-                break;
-            case 'bassdrum':
-                this.playTone(t, 'sine', 60, 0.8, v);
-                break;
-            case 'tomH':
-                this.playTone(t, 'triangle', 200, 0.3, v);
-                break;
-            case 'tomM':
-                this.playTone(t, 'triangle', 140, 0.4, v);
-                break;
-            case 'tomL':
-                this.playTone(t, 'triangle', 90, 0.5, v);
-                break;
-            case 'snare':
-                this.playTone(t, 'triangle', 200, 0.1, v); // Body
-                this.playNoise(t, 0.2, v); // Snap
-                break;
-            case 'hihat':
-                this.playNoise(t, 0.05, v);
-                break;
-            case 'openhihat':
-                this.playNoise(t, 0.4, v);
-                break;
-            case 'pedalhat':
-                this.playNoise(t, 0.08, v);
-                break;
-            case 'crash':
-                this.playNoise(t, 1.5, v);
-                break;
-            case 'ride':
-                this.playTone(t, 'square', 400, 0.1, v);
-                this.playNoise(t, 0.8, v);
-                break;
+            case 'kick': this.playTone(t, 'sine', 50, 0.3, finalVolume * 1.5); break;
+            case 'bassdrum': this.playTone(t, 'sine', 40, 0.5, finalVolume * 1.8); break;
+            case 'snare': this.playNoise(t, 0.15, finalVolume * 1.2); break;
+            case 'hihat': this.playTone(t, 'square', 8000, 0.05, finalVolume * 0.4); break;
+            case 'openhihat': this.playTone(t, 'square', 8000, 0.3, finalVolume * 0.35); break;
+            case 'pedalhat': this.playTone(t, 'square', 6000, 0.03, finalVolume * 0.3); break;
+            case 'tomH': this.playTone(t, 'sine', 150, 0.2, finalVolume * 1.3); break;
+            case 'tomM': this.playTone(t, 'sine', 120, 0.25, finalVolume * 1.3); break;
+            case 'tomL': this.playTone(t, 'sine', 90, 0.3, finalVolume * 1.3); break;
+            case 'ride': this.playTone(t, 'sawtooth', 4000, 0.6, finalVolume * 0.2); break;
+            case 'crash': this.playNoise(t, 1.5, finalVolume * 0.5); break;
             case 'clap':
                 // Clap is 3 tiny bursts + 1 decay
                 for (let i = 0; i < 3; i++) {
-                    this.playNoise(t + (i * 0.01), 0.01, v);
+                    this.playNoise(t + (i * 0.01), 0.01, finalVolume * 1.0);
                 }
-                this.playNoise(t + 0.03, 0.3, v);
+                this.playNoise(t + 0.03, 0.3, finalVolume * 1.0);
                 break;
             case 'rim':
-                this.playTone(t, 'square', 1000, 0.02, v);
+                this.playTone(t, 'sine', 2000, 0.05, finalVolume * 0.8);
                 break;
             case 'cowbell':
-                this.playTone(t, 'square', 540, 0.1, v);
-                this.playTone(t, 'square', 800, 0.08, v);
+                this.playTone(t, 'sine', 1000, 0.1, finalVolume * 1.2);
                 break;
             case 'shaker':
-                this.playNoise(t, 0.1, v);
+                this.playNoise(t, 0.05, finalVolume * 0.7);
                 break;
             case 'metronome':
-                this.playTone(t, 'square', 1000, 0.05, v);
+                this.playTone(t, 'square', 1000, 0.05, finalVolume);
                 break;
         }
     }
@@ -253,6 +227,14 @@ class Sequencer {
         // We need scheduleAheadTime to be at least (travelTime + buffer).
         const travelTimeSeconds = 2.0 / this.noteSpeed;
         this.scheduleAheadTime = travelTimeSeconds + 0.3; // 300ms buffer
+    }
+
+    changeTrackVolume(barIndex, trackIndex, vol) {
+        if (barIndex < 0 || barIndex >= this.bars.length) return;
+        const bar = this.bars[barIndex];
+        if (trackIndex >= 0 && trackIndex < bar.tracks.length) {
+            bar.tracks[trackIndex].volume = vol;
+        }
     }
 
     addBar() {
@@ -847,7 +829,7 @@ class Sequencer {
                 const audioDelay = (time - 0.15 - now) * 1000;
                 const aid = setTimeout(() => {
                     if (this.isPlaying) {
-                        this.audio.playInstrument(track.type, time);
+                        this.audio.playInstrument(track.type, time, track.volume);
                     }
                 }, Math.max(0, audioDelay));
                 this.scheduledTimeouts.push(aid);
@@ -1876,6 +1858,18 @@ class UI {
         this.hasUnsavedChanges = false;
         this.isInitializing = true; // Block auto-save during initialization
 
+        // Track Settings Elements
+        this.trackSettingsPanel = document.getElementById('track-settings-panel');
+        this.trackSettingsOverlay = document.getElementById('track-settings-overlay');
+        this.trackSettingsCloseBtn = document.getElementById('track-settings-panel-close');
+        this.trackSettingsTitle = document.getElementById('track-settings-title');
+        this.trackInstPanelSelect = document.getElementById('track-inst-panel-select');
+        this.trackVolNumber = document.getElementById('track-vol-number');
+        this.trackVolRange = document.getElementById('track-vol-range');
+        this.trackDeleteBtn = document.getElementById('track-delete-btn');
+
+        this.currentSettingsTrack = null; // { barIndex, trackIndex }
+
         // Browser-level unsaved changes warning
         window.addEventListener('beforeunload', (e) => {
             if (this.hasUnsavedChanges) {
@@ -1953,7 +1947,9 @@ class UI {
                 }
             } else {
                 console.log("UI: No share detected, using factory defaults for main page");
-                // We DON'T load any saved user config here as per user request to keep defaults
+                // Reset Project/Preset display to None
+                if (this.currentProjectDisplay) this.currentProjectDisplay.innerText = 'None';
+                if (this.currentPresetDisplay) this.currentPresetDisplay.innerText = 'None';
             }
         } catch (e) {
             console.error("UI: Error during init loading:", e);
@@ -2335,6 +2331,50 @@ class UI {
         this.configHitSoundSelect.addEventListener('change', (e) => {
             this.game.hitSoundEnabled = (e.target.value === 'sound');
             this.markDirty();
+            this.saveConfigToFirebase();
+        });
+
+        // Track Settings Panel Listeners
+        addTapListener(this.trackSettingsCloseBtn, () => this.closeTrackSettings());
+        addTapListener(this.trackSettingsOverlay, () => this.closeTrackSettings());
+
+        this.trackInstPanelSelect.addEventListener('change', (e) => {
+            if (!this.currentSettingsTrack) return;
+            const { barIndex, trackIndex } = this.currentSettingsTrack;
+            this.seq.changeTrackType(barIndex, trackIndex, e.target.value);
+            this.markDirty();
+            this.renderGrid();
+            this.saveConfigToFirebase();
+        });
+
+        const updateTrackVol = (val, isSlider) => {
+            if (!this.currentSettingsTrack) return;
+            const { barIndex, trackIndex } = this.currentSettingsTrack;
+
+            let v = parseFloat(val);
+            if (isNaN(v)) return;
+
+            const sliderVal = isSlider ? v : Math.max(0, Math.min(100, Math.round(v))) / 100;
+            const numberVal = isSlider ? Math.round(v * 100) : Math.max(0, Math.min(100, Math.round(v)));
+
+            this.trackVolRange.value = sliderVal;
+            this.trackVolNumber.value = numberVal;
+
+            this.seq.changeTrackVolume(barIndex, trackIndex, sliderVal);
+            this.markDirty();
+            this.saveConfigToFirebase();
+        };
+
+        this.trackVolRange.addEventListener('input', (e) => updateTrackVol(e.target.value, true));
+        this.trackVolNumber.addEventListener('change', (e) => updateTrackVol(e.target.value, false));
+
+        addTapListener(this.trackDeleteBtn, () => {
+            if (!this.currentSettingsTrack) return;
+            const { barIndex, trackIndex } = this.currentSettingsTrack;
+            this.seq.removeTrack(barIndex, trackIndex);
+            this.markDirty();
+            this.renderGrid();
+            this.closeTrackSettings();
             this.saveConfigToFirebase();
         });
 
@@ -2851,65 +2891,27 @@ class UI {
             systemContainer.appendChild(addBeatRightBtn);
 
             // 2. Tracks for this BAR
-            const instrumentOptions = Object.keys(this.seq.audio.instruments);
             bar.tracks.forEach((track, tIndex) => {
                 // Label
                 const labelCell = document.createElement('div');
-                labelCell.className = 'grid-row-label';
-                labelCell.style.display = 'flex';
-                labelCell.style.flexDirection = 'column';
-                labelCell.style.alignItems = 'flex-start';
-                labelCell.style.gap = '2px';
-                labelCell.style.padding = '4px 0';
+                labelCell.className = 'grid-row-label clickable';
+                labelCell.title = 'Click to open track settings';
+                labelCell.addEventListener('click', () => {
+                    this.openTrackSettings(barIndex, tIndex);
+                });
 
                 const trackNameLabel = document.createElement('span');
                 trackNameLabel.innerText = `Track ${tIndex + 1}`;
                 trackNameLabel.className = 'track-number-label';
 
-                // Instrument Select
-                const instSelect = document.createElement('select');
-                instSelect.className = 'track-inst-select';
-
-                instrumentOptions.forEach(optVal => {
-                    const opt = document.createElement('option');
-                    opt.value = optVal;
-
-                    // Prefix with "Drums - " for drum instruments
-                    const drumInstruments = ['kick', 'bassdrum', 'snare', 'hihat', 'openhihat', 'pedalhat', 'tomH', 'tomM', 'tomL', 'ride', 'crash', 'clap', 'rim', 'cowbell', 'shaker'];
-                    const isDrum = drumInstruments.includes(optVal);
-                    opt.innerText = isDrum ? `DRUMS - ${optVal.toUpperCase()}` : optVal.toUpperCase();
-
-                    if (track.type === optVal) opt.selected = true;
-                    instSelect.appendChild(opt);
-                });
-                instSelect.addEventListener('change', (e) => {
-                    this.seq.changeTrackType(barIndex, tIndex, e.target.value);
-                    this.markDirty();
-                });
-
-                // Delete Button
-                const delBtn = document.createElement('button');
-                delBtn.innerText = '×';
-                delBtn.className = 'track-del-btn';
-                delBtn.style.marginLeft = '5px';
-                delBtn.addEventListener('click', () => {
-                    this.seq.removeTrack(barIndex, tIndex);
-                    this.markDirty();
-                    this.renderGrid();
-                });
-
-                // Row for selector and delete btn
-                const actionRow = document.createElement('div');
-                actionRow.style.display = 'flex';
-                actionRow.style.width = '100%';
-                actionRow.style.alignItems = 'center';
-                actionRow.style.gap = '5px';
-
-                actionRow.appendChild(instSelect);
-                actionRow.appendChild(delBtn);
+                const instNameSub = document.createElement('span');
+                instNameSub.innerText = track.type.toUpperCase();
+                instNameSub.style.fontSize = '0.65rem';
+                instNameSub.style.color = 'var(--primary-color)';
+                instNameSub.style.opacity = '0.8';
 
                 labelCell.appendChild(trackNameLabel);
-                labelCell.appendChild(actionRow);
+                labelCell.appendChild(instNameSub);
                 systemContainer.appendChild(labelCell);
 
                 // Steps
@@ -2960,7 +2962,8 @@ class UI {
 
                             // Play sound for all selection actions (not just toggle)
                             if (!this.seq.isPlaying && this.stepSoundEnabled) {
-                                this.seq.audio.playInstrument(track.type);
+                                if (!this.seq.audio.isInitialized) this.seq.audio.init();
+                                this.seq.audio.playInstrument(track.type, 0, track.volume);
                             }
                         });
                         beatCell.appendChild(btn);
@@ -3953,9 +3956,14 @@ class UI {
             this.presetBtn.innerText = 'Share URL';
             if (panelTitle) panelTitle.innerText = 'SHARE URL';
 
-            // Hide header info in Standard Mode if no preset is loaded
-            if (currentPresetInfo && (!this.currentPresetName || this.currentPresetName === 'None')) {
-                currentPresetInfo.classList.add('hidden');
+            // Always show header info in Standard Mode as requested
+            if (currentPresetInfo) {
+                currentPresetInfo.classList.remove('hidden');
+                // If no preset name, ensure it says None
+                if (!this.currentPresetName || this.currentPresetName === 'None') {
+                    if (this.currentProjectDisplay) this.currentProjectDisplay.innerText = 'None';
+                    if (this.currentPresetDisplay) this.currentPresetDisplay.innerText = 'None';
+                }
             }
 
             if (presetActions) presetActions.classList.add('hidden');
@@ -3963,6 +3971,45 @@ class UI {
             if (presetListSection) presetListSection.classList.add('hidden');
             if (shareUrlSection) shareUrlSection.classList.remove('hidden');
         }
+    }
+
+    openTrackSettings(barIndex, trackIndex) {
+        if (!this.seq.bars[barIndex]) return;
+        const bar = this.seq.bars[barIndex];
+        const track = bar.tracks[trackIndex];
+        if (!track) return;
+
+        this.currentSettingsTrack = { barIndex, trackIndex };
+        this.trackSettingsTitle.innerText = `TRACK ${trackIndex + 1} SETTINGS`;
+
+        // Populate Instrument Options
+        this.trackInstPanelSelect.innerHTML = '';
+        const instrumentOptions = Object.keys(this.seq.audio.instruments);
+        const drumInstruments = ['kick', 'bassdrum', 'snare', 'hihat', 'openhihat', 'pedalhat', 'tomH', 'tomM', 'tomL', 'ride', 'crash', 'clap', 'rim', 'cowbell', 'shaker'];
+
+        instrumentOptions.forEach(optVal => {
+            const opt = document.createElement('option');
+            opt.value = optVal;
+            const isDrum = drumInstruments.includes(optVal);
+            opt.innerText = isDrum ? `DRUMS - ${optVal.toUpperCase()}` : optVal.toUpperCase();
+            if (track.type === optVal) opt.selected = true;
+            this.trackInstPanelSelect.appendChild(opt);
+        });
+
+        // Set Volume
+        const volPercent = Math.round(track.volume * 100);
+        this.trackVolNumber.value = volPercent;
+        this.trackVolRange.value = track.volume;
+
+        // Show Panel
+        this.trackSettingsPanel.classList.remove('hidden');
+        this.trackSettingsOverlay.classList.remove('hidden');
+    }
+
+    closeTrackSettings() {
+        this.trackSettingsPanel.classList.add('hidden');
+        this.trackSettingsOverlay.classList.add('hidden');
+        this.currentSettingsTrack = null;
     }
 
     escapeHtml(text) {
