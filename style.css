@@ -439,6 +439,8 @@ main {
     align-items: center;
     user-select: none;
     transition: color 0.2s;
+    touch-action: none;
+    /* Prevents scrolling while dragging the handle */
 }
 
 .bar-drag-handle:hover {

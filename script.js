@@ -1757,6 +1757,8 @@ class UI {
         this.configStepSoundSelect = document.getElementById('config-step-sound-select');
         this.configHitCriteriaSelect = document.getElementById('config-hit-criteria-select');
 
+        this.touchDraggedBarIndex = null;
+
         // Config Buttons
         this.configResetBtn = document.getElementById('config-reset-btn');
         this.configResultResetBtn = document.getElementById('config-result-reset-btn');
@@ -2299,6 +2301,55 @@ class UI {
             dragHandle.className = 'bar-drag-handle';
             dragHandle.innerHTML = '&#8942;&#8942;'; // Vertically stacked dots (⋮⋮)
             dragHandle.title = 'Drag to reorder';
+
+            // Touch Support for Bar Reordering
+            dragHandle.addEventListener('touchstart', (e) => {
+                // e.preventDefault(); // Don't prevent default on start to allow potential taps
+                e.stopPropagation();
+                this.touchDraggedBarIndex = barIndex;
+                systemContainer.classList.add('dragging-bar');
+            }, { passive: true });
+
+            dragHandle.addEventListener('touchmove', (e) => {
+                if (this.touchDraggedBarIndex === null) return;
+
+                // Prevent scrolling while dragging the handle
+                if (e.cancelable) e.preventDefault();
+
+                const touch = e.touches[0];
+                const targetEl = document.elementFromPoint(touch.clientX, touch.clientY);
+                const targetContainer = targetEl?.closest('.system-container');
+
+                // Clear previous drop highlights for Bars
+                document.querySelectorAll('.system-container').forEach(el => el.classList.remove('drag-over-bar'));
+
+                if (targetContainer && targetContainer !== systemContainer) {
+                    targetContainer.classList.add('drag-over-bar');
+                }
+            }, { passive: false });
+
+            dragHandle.addEventListener('touchend', (e) => {
+                if (this.touchDraggedBarIndex === null) return;
+
+                const touch = e.changedTouches[0];
+                const targetEl = document.elementFromPoint(touch.clientX, touch.clientY);
+                const targetContainer = targetEl?.closest('.system-container');
+
+                const fromIndex = this.touchDraggedBarIndex;
+                this.touchDraggedBarIndex = null;
+
+                systemContainer.classList.remove('dragging-bar');
+                document.querySelectorAll('.system-container').forEach(el => el.classList.remove('drag-over-bar'));
+
+                if (targetContainer) {
+                    const toIndex = parseInt(targetContainer.dataset.barIndex);
+                    if (fromIndex !== toIndex) {
+                        this.seq.moveBar(fromIndex, toIndex);
+                        this.renderGrid();
+                    }
+                }
+            });
+
             emptyHeader.appendChild(dragHandle);
 
             const labelSpan = document.createElement('span');
