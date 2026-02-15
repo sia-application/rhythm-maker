@@ -429,6 +429,40 @@ main {
     padding-right: 10px;
 }
 
+.bar-name-input {
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    color: var(--primary-color);
+    padding: 2px 0;
+    font-size: 0.9rem;
+    width: 100px;
+    margin-left: 0;
+    outline: none;
+    font-weight: 700;
+    transition: all 0.2s ease;
+    text-shadow: 0 0 5px var(--primary-glow);
+}
+
+.bar-name-input::placeholder {
+    color: #8b9bb4;
+    font-weight: 600;
+    text-shadow: none;
+}
+
+.bar-name-input:hover {
+    background: rgba(255, 255, 255, 0.05);
+    padding-left: 4px;
+    padding-right: 4px;
+}
+
+.bar-name-input:focus {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.2);
+    padding: 2px 6px;
+    text-shadow: none;
+}
+
 .step-btn {
     width: var(--step-size);
     /* Fixed size based on 16th note feel */

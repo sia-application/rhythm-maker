@@ -257,6 +257,7 @@ class Sequencer {
         const barId = this.bars.length;
         const bar = {
             id: barId,
+            name: ``,
             beats: [],
             tracks: []
         };
@@ -1046,6 +1047,7 @@ class Sequencer {
                 combo: extraData.combo || 0
             },
             bars: this.bars.map(bar => ({
+                name: bar.name || '',
                 beats: bar.beats.map(b => ({ subdivision: b.subdivision })),
                 tracks: bar.tracks.map(track => ({
                     type: track.type,
@@ -1082,6 +1084,7 @@ class Sequencer {
             data.bars.forEach((barData, barIndex) => {
                 const bar = {
                     id: barIndex,
+                    name: barData.name || '',
                     beats: barData.beats.map(b => ({ subdivision: b.subdivision })),
                     tracks: barData.tracks.map(trackData => ({
                         id: this.nextTrackId++,
@@ -2202,6 +2205,21 @@ class UI {
             const labelSpan = document.createElement('span');
             labelSpan.innerText = `Bar ${barIndex + 1}`;
             emptyHeader.appendChild(labelSpan);
+
+            const nameInput = document.createElement('input');
+            nameInput.type = 'text';
+            nameInput.className = 'bar-name-input';
+            nameInput.value = bar.name || '';
+            nameInput.placeholder = 'Bar Name';
+            nameInput.addEventListener('change', (e) => {
+                bar.name = e.target.value;
+            });
+            nameInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !e.isComposing) {
+                    nameInput.blur();
+                }
+            });
+            emptyHeader.appendChild(nameInput);
 
             systemContainer.appendChild(emptyHeader);
 
