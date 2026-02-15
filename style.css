@@ -39,9 +39,8 @@ body {
     flex-direction: column;
     height: 100vh;
     padding: 20px;
-    width: fit-content;
-    min-width: 1200px;
-    max-width: none;
+    width: 100%;
+    max-width: 1200px;
     margin: 0 auto;
 }
 
@@ -52,7 +51,8 @@ body {
     align-items: center;
     margin-bottom: 20px;
     padding: 0 10px;
-    width: 1200px;
+    width: 100%;
+    max-width: 1200px;
     margin-left: auto;
     margin-right: auto;
 }
@@ -99,7 +99,8 @@ h1 {
     gap: 20px;
     margin-bottom: 20px;
     position: relative;
-    width: 1200px;
+    width: 100%;
+    max-width: 1200px;
     margin-left: auto;
     margin-right: auto;
 }
@@ -340,11 +341,11 @@ main {
 }
 
 .sequencer-container {
-    width: fit-content;
-    min-width: 1200px;
+    width: 100%;
+    max-width: 1200px;
     height: 100%;
     overflow-y: auto;
-    overflow-x: visible;
+    overflow-x: auto;
     position: relative;
     margin-left: auto;
     margin-right: auto;
