@@ -1,4 +1,4 @@
-const CACHE_NAME = 'rhythm-maker-pro-v1.6.3';
+const CACHE_NAME = 'rhythm-maker-pro-v1.6.7';
 const ASSETS = [
     './',
     './index.html',
@@ -13,7 +13,14 @@ self.addEventListener('install', (event) => {
     self.skipWaiting();
     event.waitUntil(
         caches.open(CACHE_NAME).then((cache) => {
-            return cache.addAll(ASSETS);
+            return Promise.all(
+                ASSETS.map((url) => {
+                    return fetch(new Request(url, { cache: 'reload' })).then((response) => {
+                        if (!response.ok) throw new Error(`Fetch failed for ${url}`);
+                        return cache.put(url, response);
+                    });
+                })
+            );
         })
     );
 });

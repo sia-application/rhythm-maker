@@ -1805,6 +1805,7 @@ main {
         gap: 10px;
     }
 
+    #header-new-project-btn,
     #view-toggle-btn,
     #preset-btn,
     #config-btn {

@@ -1798,7 +1798,23 @@ class UI {
         this.presetPanel = document.getElementById('preset-panel');
         this.presetOverlay = document.getElementById('preset-overlay');
         this.presetBtn = document.getElementById('preset-btn');
+        this.headerNewProjectBtn = document.getElementById('header-new-project-btn');
         this.presetPanelClose = document.getElementById('preset-panel-close');
+
+        this.hasUnsavedChanges = false;
+
+        // Browser-level unsaved changes warning
+        window.addEventListener('beforeunload', (e) => {
+            if (this.hasUnsavedChanges) {
+                // For modern browsers
+                e.preventDefault();
+                // Some browsers require a return value to be set.
+                // Note: The actual string is usually ignored by modern browsers.
+                const msg = '変更が保存されていません。終了しますか？';
+                e.returnValue = msg;
+                return msg;
+            }
+        });
         this.saveNewBtn = document.getElementById('save-new-btn');
         this.addFolderBtn = document.getElementById('add-folder-btn');
         this.folderForm = document.getElementById('folder-form');
@@ -1955,6 +1971,7 @@ class UI {
             num = Math.max(20, Math.min(999, num));
             this.seq.bpm = num;
             this.seq.updateSettings(num, this.seq.timeSignature);
+            this.markDirty();
 
             // Sync all BPM inputs
             const targets = [this.bpmInput, this.bpmNumber, this.configBpmInput, this.configBpmNumber];
@@ -2035,6 +2052,7 @@ class UI {
             num = Math.max(20, Math.min(999, num));
             this.seq.bpm = num;
             this.seq.updateSettings(num, this.seq.timeSignature);
+            this.markDirty();
 
             const targets = [this.bpmInput, this.bpmNumber, this.configBpmInput, this.configBpmNumber];
             targets.forEach(t => {
@@ -2059,6 +2077,7 @@ class UI {
             if (this.seq.audio.isInitialized) {
                 this.seq.audio.masterGain.gain.setTargetAtTime(sliderVal, this.seq.audio.ctx.currentTime, 0.05);
             }
+            this.markDirty();
         };
 
         this.configMasterVol.addEventListener('input', (e) => updateVol(e.target.value, e.target, true));
@@ -2067,6 +2086,7 @@ class UI {
         // Time Sig
         this.configTimeSigSelect.addEventListener('change', (e) => {
             this.seq.updateSettings(this.seq.bpm, parseInt(e.target.value));
+            this.markDirty();
         });
 
         // Subdivision
@@ -2077,25 +2097,30 @@ class UI {
                     this.seq.updateBeatSubdivision(barIndex, i, val);
                 }
             });
+            this.markDirty();
             this.renderGrid();
         });
 
         // Playback Mode
         this.configPlaybackModeSelect.addEventListener('change', (e) => {
             this.seq.playbackMode = e.target.value;
+            this.markDirty();
         });
 
         // Step Sound Mode
         this.configOffBeatModeSelect.addEventListener('change', (e) => {
             this.seq.offBeatMode = (e.target.value === 'on');
+            this.markDirty();
         });
 
         this.configHitSoundSelect.addEventListener('change', (e) => {
             this.game.hitSoundEnabled = (e.target.value === 'sound');
+            this.markDirty();
         });
 
         this.configHitSoundTypeSelect.addEventListener('change', (e) => {
             this.game.hitSoundType = e.target.value;
+            this.markDirty();
         });
 
         this.configStepSoundSelect.addEventListener('change', (e) => {
@@ -2118,11 +2143,13 @@ class UI {
             this.seq.noteSpeed = val;
             this.seq.updateScheduleAheadTime();
             this.configGameSpeedVal.innerText = val.toFixed(1);
+            this.markDirty();
         });
 
         // Hit Criteria
         this.configHitCriteriaSelect.addEventListener('change', (e) => {
             this.game.hitCriteria = e.target.value;
+            this.markDirty();
         });
 
         // Result Reset
@@ -2131,10 +2158,25 @@ class UI {
         });
     }
 
+    markDirty() {
+        if (!this.hasUnsavedChanges) {
+            console.warn('UI: Unsaved changes detected');
+            this.hasUnsavedChanges = true;
+        }
+    }
+
+    markClean() {
+        if (this.hasUnsavedChanges) {
+            console.log('UI: Changes saved or reset');
+            this.hasUnsavedChanges = false;
+        }
+    }
+
     /**
      * Execute the selected step action based on the dropdown value
      */
     executeStepAction(barIndex, trackIndex, beatIndex, stepIndex) {
+        this.markDirty();
         const action = this.stepActionSelect.value;
         const track = this.seq.bars[barIndex].tracks[trackIndex];
 
@@ -2312,6 +2354,7 @@ class UI {
 
                 if (fromIndex !== toIndex) {
                     this.seq.moveBar(fromIndex, toIndex);
+                    this.markDirty();
                     this.renderGrid();
                 }
             });
@@ -2324,6 +2367,7 @@ class UI {
             barDelBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 this.seq.removeBar(barIndex);
+                this.markDirty();
                 this.renderGrid();
             });
             systemContainer.appendChild(barDelBtn);
@@ -2593,6 +2637,7 @@ class UI {
                 });
                 instSelect.addEventListener('change', (e) => {
                     this.seq.changeTrackType(barIndex, tIndex, e.target.value);
+                    this.markDirty();
                 });
 
                 // Delete Button
@@ -2602,6 +2647,7 @@ class UI {
                 delBtn.style.marginLeft = '5px';
                 delBtn.addEventListener('click', () => {
                     this.seq.removeTrack(barIndex, tIndex);
+                    this.markDirty();
                     this.renderGrid();
                 });
 
@@ -2693,6 +2739,7 @@ class UI {
             addTrackBtn.style.marginTop = '0'; // Override generic
             addTrackBtn.addEventListener('click', () => {
                 this.seq.addTrack(barIndex); // Defaults to metronome
+                this.markDirty();
                 this.renderGrid();
             });
 
@@ -2705,6 +2752,7 @@ class UI {
             copyBarBtn.title = 'Duplicate this bar to the end';
             copyBarBtn.addEventListener('click', () => {
                 this.seq.duplicateBar(barIndex);
+                this.markDirty();
                 this.renderGrid();
                 // Scroll to the bottom to see the new bar
                 setTimeout(() => {
@@ -2735,6 +2783,7 @@ class UI {
         // Removed inline background to use class style
         addBarBtn.addEventListener('click', () => {
             this.seq.addBar();
+            this.markDirty();
             this.renderGrid();
         });
 
@@ -2825,6 +2874,11 @@ class UI {
                 this.closeSaveDialog();
             }
         });
+
+        // Header New Project
+        if (this.headerNewProjectBtn) {
+            addTapListener(this.headerNewProjectBtn, () => this.newProject());
+        }
     }
 
     showFolderForm() {
@@ -2931,6 +2985,7 @@ class UI {
             const confirmed = confirm('同じ名前のPresetがこのフォルダ内に既に存在します。上書きしますか？');
             if (confirmed) {
                 await this.presetManager.updatePreset(existingPreset.id, data);
+                this.markClean();
                 this.closeSaveDialog();
                 await this.renderPresetList();
                 await this.updateCurrentInfo(name, folderId);
@@ -2941,9 +2996,55 @@ class UI {
         }
 
         await this.presetManager.savePreset(name, folderId, data, this.currentShareId);
+        this.markClean();
         this.closeSaveDialog();
         await this.renderPresetList();
         await this.updateCurrentInfo(name, folderId);
+    }
+
+    async newProject() {
+        const confirmed = confirm('現在の内容を破棄して新規プロジェクトを開始しますか？');
+        if (!confirmed) return;
+
+        this.markClean();
+
+        // Reset Metadata
+        this.currentProjectName = 'None';
+        this.currentPresetName = 'None';
+        this.currentFolderId = null;
+        this.currentPresetId = null;
+        this.currentShareId = null;
+
+        // Clear Sequencer
+        this.seq.bars = [];
+        this.seq.addBar();
+        this.seq.bpm = 120;
+
+        // Reset UI Elements
+        if (this.bpmNumber) this.bpmNumber.value = 120;
+        if (this.bpmInput) this.bpmInput.value = 120;
+        if (this.configBpmNumber) this.configBpmNumber.value = 120;
+        if (this.configBpmInput) this.configBpmInput.value = 120;
+
+        // Reset Game
+        this.game.score = 0;
+        this.game.hitCount = 0;
+        this.game.totalNotes = 0;
+        this.game.combo = 0;
+        if (this.game.scoreEl) this.game.scoreEl.textContent = '0';
+        if (this.game.hitEl) this.game.hitEl.textContent = '0';
+        if (this.game.totalNotesEl) this.game.totalNotesEl.textContent = '0';
+        if (this.game.comboEl) this.game.comboEl.textContent = '0';
+
+        // Refresh UI
+        await this.updateCurrentInfo('None', null);
+        this.renderGrid();
+
+        // Clean URL (remove share ID)
+        if (window.history.pushState) {
+            const newurl = window.location.protocol + "//" + window.location.host + window.location.pathname;
+            window.history.pushState({ path: newurl }, '', newurl);
+        }
     }
 
     async updateCurrentInfo(presetName, folderId) {
@@ -3633,6 +3734,8 @@ document.addEventListener('DOMContentLoaded', () => {
             navigator.serviceWorker.register('./sw.js')
                 .then(reg => {
                     console.log('PWA: ServiceWorker registration successful with scope: ', reg.scope);
+                    // Proactively check for updates on every load
+                    reg.update();
                 })
                 .catch(err => console.error('PWA: ServiceWorker registration failed: ', err));
         });
