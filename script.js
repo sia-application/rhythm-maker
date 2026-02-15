@@ -2550,7 +2550,7 @@ class UI {
 
     markDirty() {
         if (!this.hasUnsavedChanges) {
-            console.warn('UI: Unsaved changes detected');
+            console.log('UI: Unsaved changes detected');
             this.hasUnsavedChanges = true;
         }
     }
