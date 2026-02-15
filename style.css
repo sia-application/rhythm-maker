@@ -1945,13 +1945,21 @@ main {
         /* Ensure margin auto works if not flex item, or naturally flows */
     }
 
-    /* Override for +Track button to keep it small and aligned on mobile */
-    .track-add-btn {
+    /* Override for +Track and Copy buttons to keep them small and aligned on mobile */
+    .track-add-btn,
+    .bar-copy-btn {
         min-width: 0 !important;
         margin: 0 !important;
         display: inline-block !important;
-        padding: 2px 8px !important;
-        font-size: 0.7rem !important;
+        padding: 4px 10px !important;
+        font-size: 0.75rem !important;
+        height: auto !important;
+        line-height: 1.2 !important;
+    }
+
+    .add-track-container {
+        padding-left: 5px;
+        align-items: center;
     }
 
     /* Force Make Tools to stack vertically (Label top, Dropdown bottom) */

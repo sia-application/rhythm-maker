@@ -2631,9 +2631,10 @@ class UI {
                 });
             });
 
-            // 3. Add Track Button INSIDE the Bar (Last Row of Grid or separate?)
+            // 3. Add Track Button INSIDE the Bar
             const addTrackContainer = document.createElement('div');
-            addTrackContainer.style.gridColumn = '1 / 2'; // Span only first column (Label column)
+            addTrackContainer.className = 'add-track-container';
+            addTrackContainer.style.gridColumn = '1 / 2';
             addTrackContainer.style.paddingTop = '5px';
             addTrackContainer.style.display = 'flex';
             addTrackContainer.style.justifyContent = 'flex-start';
