@@ -237,6 +237,22 @@ class Sequencer {
         }
     }
 
+    syncTrackVolumeAcrossBars(trackIndex, vol) {
+        this.bars.forEach(bar => {
+            if (trackIndex >= 0 && trackIndex < bar.tracks.length) {
+                bar.tracks[trackIndex].volume = vol;
+            }
+        });
+    }
+
+    syncTrackTypeAcrossBars(trackIndex, newType) {
+        this.bars.forEach(bar => {
+            if (trackIndex >= 0 && trackIndex < bar.tracks.length) {
+                bar.tracks[trackIndex].type = newType;
+            }
+        });
+    }
+
     addBar() {
         const barId = this.bars.length;
         const bar = {
@@ -1867,6 +1883,8 @@ class UI {
         this.trackVolNumber = document.getElementById('track-vol-number');
         this.trackVolRange = document.getElementById('track-vol-range');
         this.trackDeleteBtn = document.getElementById('track-delete-btn');
+        this.syncInstAllBtn = document.getElementById('sync-inst-all-btn');
+        this.syncVolAllBtn = document.getElementById('sync-vol-all-btn');
 
         this.currentSettingsTrack = null; // { barIndex, trackIndex }
 
@@ -2367,6 +2385,26 @@ class UI {
 
         this.trackVolRange.addEventListener('input', (e) => updateTrackVol(e.target.value, true));
         this.trackVolNumber.addEventListener('change', (e) => updateTrackVol(e.target.value, false));
+
+        addTapListener(this.syncInstAllBtn, () => {
+            if (!this.currentSettingsTrack) return;
+            const { trackIndex } = this.currentSettingsTrack;
+            const newType = this.trackInstPanelSelect.value;
+            this.seq.syncTrackTypeAcrossBars(trackIndex, newType);
+            this.markDirty();
+            this.renderGrid();
+            this.saveConfigToFirebase();
+        });
+
+        addTapListener(this.syncVolAllBtn, () => {
+            if (!this.currentSettingsTrack) return;
+            const { trackIndex } = this.currentSettingsTrack;
+            const vol = parseFloat(this.trackVolRange.value);
+            this.seq.syncTrackVolumeAcrossBars(trackIndex, vol);
+            this.markDirty();
+            this.renderGrid();
+            this.saveConfigToFirebase();
+        });
 
         addTapListener(this.trackDeleteBtn, () => {
             if (!this.currentSettingsTrack) return;
@@ -4004,12 +4042,22 @@ class UI {
         // Show Panel
         this.trackSettingsPanel.classList.remove('hidden');
         this.trackSettingsOverlay.classList.remove('hidden');
+
+        requestAnimationFrame(() => {
+            this.trackSettingsPanel.classList.add('active');
+            this.trackSettingsOverlay.classList.add('active');
+        });
     }
 
     closeTrackSettings() {
-        this.trackSettingsPanel.classList.add('hidden');
-        this.trackSettingsOverlay.classList.add('hidden');
-        this.currentSettingsTrack = null;
+        this.trackSettingsPanel.classList.remove('active');
+        this.trackSettingsOverlay.classList.remove('active');
+
+        setTimeout(() => {
+            this.trackSettingsPanel.classList.add('hidden');
+            this.trackSettingsOverlay.classList.add('hidden');
+            this.currentSettingsTrack = null;
+        }, 300);
     }
 
     escapeHtml(text) {
