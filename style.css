@@ -1946,14 +1946,25 @@ main {
     }
 
     .grid-row-label {
+        flex-direction: row !important;
+        align-items: center !important;
+        gap: 5px !important;
         font-size: 0.7rem;
         padding-right: 5px;
+        height: var(--step-size);
+        padding: 0 !important;
+    }
+
+    .track-number-label {
+        margin-bottom: 0 !important;
+        white-space: nowrap;
     }
 
     .track-inst-select {
         width: 80px;
         font-size: 0.65rem;
         padding: 2px;
+        height: 24px !important;
     }
 
     .beat-subdiv-ctrl {
@@ -2073,7 +2084,11 @@ main {
     }
 
     .grid-row-label {
+        flex-direction: row !important;
+        align-items: center !important;
+        gap: 4px !important;
         font-size: 0.6rem;
+        height: var(--step-size);
     }
 
     .game-lanes {
