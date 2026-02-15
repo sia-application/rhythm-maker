@@ -488,6 +488,8 @@ main {
 }
 
 .grid-row-label.step-value-label {
+    justify-content: center;
+    padding-left: 0;
     margin-top: 5px;
     height: 24px;
     /* Adjusted to match beat-value-display height better */
