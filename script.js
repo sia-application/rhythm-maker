@@ -340,7 +340,7 @@ class Sequencer {
 
         // Deep copy the bar structure
         const newBar = {
-            name: (originalBar.name || "") + " (Copy)",
+            name: originalBar.name || "",
             beats: originalBar.beats.map(beat => ({
                 subdivision: beat.subdivision
             })),

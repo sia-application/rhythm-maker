@@ -1,4 +1,4 @@
-const CACHE_NAME = 'rhythm-maker-pro-v1.8.4';
+const CACHE_NAME = 'sw-v1.0.0';
 const ASSETS = [
     './',
     './index.html',
