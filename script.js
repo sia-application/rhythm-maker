@@ -2369,7 +2369,12 @@ class UI {
                 instrumentOptions.forEach(optVal => {
                     const opt = document.createElement('option');
                     opt.value = optVal;
-                    opt.innerText = optVal.toUpperCase();
+
+                    // Prefix with "Drums - " for drum instruments
+                    const drumInstruments = ['kick', 'bassdrum', 'snare', 'hihat', 'openhihat', 'pedalhat', 'tomH', 'tomM', 'tomL', 'ride', 'crash', 'clap', 'rim', 'cowbell', 'shaker'];
+                    const isDrum = drumInstruments.includes(optVal);
+                    opt.innerText = isDrum ? `DRUMS - ${optVal.toUpperCase()}` : optVal.toUpperCase();
+
                     if (track.type === optVal) opt.selected = true;
                     instSelect.appendChild(opt);
                 });
