@@ -1094,10 +1094,17 @@ class Sequencer {
             playbackMode: this.playbackMode,
             lastSelectedInstrument: this.lastSelectedInstrument,
             config: {
-                masterVolume: this.audio.masterGain ? this.audio.masterGain.gain.value : (document.getElementById('config-master-vol')?.value || 0.5),
-                playbackMode: this.playbackMode,
-                hitCriteria: extraData.hitCriteria || 'great',
-                gameSpeed: extraData.gameSpeed || 1.0
+                bpm: this.bpm,
+                vol: this.audio.masterGain ? this.audio.masterGain.gain.value : 0.5,
+                ts: this.timeSignature,
+                sd: extraData.subdivision || 4,
+                pb: this.playbackMode,
+                sse: extraData.stepSoundEnabled !== undefined ? extraData.stepSoundEnabled : 1,
+                gs: extraData.gameSpeed || 1.0,
+                ob: this.offBeatMode ? 1 : 0,
+                hc: extraData.hitCriteria || 'great',
+                hse: extraData.hitSoundEnabled !== undefined ? extraData.hitSoundEnabled : 1,
+                hst: extraData.hitSoundType || 'metronome'
             },
             uiState: {
                 stepAction: extraData.stepAction || 'toggle'
@@ -1133,9 +1140,11 @@ class Sequencer {
         if (data.config) {
             if (data.config.masterVolume !== undefined) {
                 try {
-                    this.audio.masterGain.gain.value = data.config.masterVolume;
+                    if (this.audio && this.audio.isInitialized && this.audio.masterGain) {
+                        this.audio.masterGain.gain.value = data.config.masterVolume;
+                    }
                 } catch (e) {
-                    console.warn("Failed to set master volume:", e);
+                    console.warn("Failed to set master volume during deserialize:", e);
                 }
             }
             if (data.config.playbackMode) this.playbackMode = data.config.playbackMode;
@@ -1174,6 +1183,7 @@ class PresetManager {
         // Firestore references
         this.presetsRef = db.collection('presets');
         this.foldersRef = db.collection('folders');
+        this.userConfigsRef = db.collection('userConfigs');
 
         // User ID for ownership tracking
         this.userId = null;
@@ -1383,6 +1393,55 @@ class PresetManager {
     getPresetsByFolder(folderId) {
         if (!this._presetsCache) return [];
         return this._presetsCache.filter(p => p.folderId === folderId);
+    }
+
+    // ==================== USER CONFIG ====================
+    async saveUserConfig(configData, contextId = null) {
+        if (!this.userId) return;
+        try {
+            const data = {
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            };
+
+            if (contextId) {
+                // Save as an override for a specific share
+                data[`overrides.${contextId}`] = configData;
+            } else {
+                // Save as the main default config
+                data.config = configData;
+            }
+
+            await this.userConfigsRef.doc(this.userId).update(data).catch(async (err) => {
+                // If document doesn't exist, create it with set
+                if (err.code === 'not-found') {
+                    const initialData = contextId
+                        ? { overrides: { [contextId]: configData } }
+                        : { config: configData };
+                    await this.userConfigsRef.doc(this.userId).set(initialData);
+                } else {
+                    throw err;
+                }
+            });
+        } catch (e) {
+            console.error('Error saving user config:', e);
+        }
+    }
+
+    async getUserConfig(contextId = null) {
+        if (!this.userId) return null;
+        try {
+            const doc = await this.userConfigsRef.doc(this.userId).get();
+            if (doc.exists) {
+                const data = doc.data();
+                if (contextId) {
+                    return (data.overrides && data.overrides[contextId]) ? data.overrides[contextId] : null;
+                }
+                return data.config;
+            }
+        } catch (e) {
+            console.error('Error getting user config:', e);
+        }
+        return null;
     }
 }
 
@@ -1811,7 +1870,9 @@ class UI {
         this.presetPanelClose = document.getElementById('preset-panel-close');
 
         this.userId = null;
+        this.currentShareId = null; // Track current share context
         this.hasUnsavedChanges = false;
+        this.isInitializing = true; // Block auto-save during initialization
 
         // Browser-level unsaved changes warning
         window.addEventListener('beforeunload', (e) => {
@@ -1848,6 +1909,9 @@ class UI {
         this.currentProjectDisplay = document.getElementById('current-project-name');
         this.currentPresetDisplay = document.getElementById('current-preset-name');
 
+        // Debounce timer for Firebase config sync
+        this.configSyncTimeout = null;
+
         // Initial UI Visibility State
         const hasParams = !!(this.currentShareId || urlParams.get('d') || urlParams.get('data'));
         this.updatePresetPanelVisibility(hasParams);
@@ -1871,10 +1935,25 @@ class UI {
     async init() {
         console.log("UI: Starting async data loading...");
         try {
-            await this.loadFromUrlParams(); // Load from URL if params exist
+            const urlParams = new URLSearchParams(window.location.search);
+            this.currentShareId = urlParams.get('s');
+
+            const hasShare = await this.loadFromUrlParams(); // Load share data from URL
             this.renderGrid();
+
+            // Handle Context-Aware Persistence
+            if (this.currentShareId) {
+                console.log(`UI: Share detected (${this.currentShareId}), loading user override`);
+                const shareOverride = await this.presetManager.getUserConfig(this.currentShareId);
+                if (shareOverride) {
+                    this.applyConfig(shareOverride);
+                }
+            } else {
+                console.log("UI: No share detected, using factory defaults for main page");
+                // We DON'T load any saved user config here as per user request to keep defaults
+            }
         } catch (e) {
-            console.error("UI: Error loading from URL params:", e);
+            console.error("UI: Error during init loading:", e);
         }
 
         try {
@@ -1883,7 +1962,107 @@ class UI {
         } catch (e) {
             console.error("UI: Error loading presets/folders:", e);
         }
+
+        this.isInitializing = false; // Enable auto-save
+        this.clearUrlParams(); // Clean the URL
         console.log("UI: Async data loading complete for UserID:", this.userId);
+    }
+
+    clearUrlParams() {
+        const url = new URL(window.location.href);
+        const s = url.searchParams.get('s');
+        const d = url.searchParams.get('d');
+        const data = url.searchParams.get('data');
+
+        // Update current share context (should already be set in init, but for safety)
+        if (s) this.currentShareId = s;
+
+        if (url.search) {
+            const newUrl = new URL(url.pathname, url.origin);
+            if (s) newUrl.searchParams.set('s', s);
+            if (d) newUrl.searchParams.set('d', d);
+            if (data) newUrl.searchParams.set('data', data);
+
+            // Only update if the URL actually changed (i.e. we removed some params)
+            if (url.search !== newUrl.search) {
+                console.log("UI: Cleaning URL parameters (preserving share IDs)");
+                window.history.replaceState({}, document.title, newUrl.pathname + newUrl.search);
+            }
+        }
+    }
+
+    applyConfig(config) {
+        if (!config) return;
+
+        if (config.bpm) {
+            this.seq.bpm = config.bpm;
+            if (this.bpmInput) this.bpmInput.value = config.bpm;
+            if (this.bpmNumber) this.bpmNumber.value = config.bpm;
+            if (this.configBpmInput) this.configBpmInput.value = config.bpm;
+            if (this.configBpmNumber) this.configBpmNumber.value = config.bpm;
+        }
+
+        if (config.vol !== undefined) {
+            const vol = parseFloat(config.vol);
+            if (this.configMasterVol) this.configMasterVol.value = vol;
+            if (this.configVolNumber) this.configVolNumber.value = Math.round(vol * 100);
+            if (this.seq.audio.isInitialized) {
+                this.seq.audio.masterGain.gain.value = vol;
+            }
+        }
+
+        if (config.ts) {
+            this.seq.timeSignature = config.ts;
+            if (this.configTimeSigSelect) this.configTimeSigSelect.value = config.ts;
+        }
+
+        if (config.sd) {
+            if (this.configSubdivSelect) this.configSubdivSelect.value = config.sd;
+            this.seq.bars.forEach((bar, barIndex) => {
+                for (let i = 0; i < bar.beats.length; i++) {
+                    this.seq.updateBeatSubdivision(barIndex, i, config.sd);
+                }
+            });
+        }
+
+        if (config.pb) {
+            this.seq.playbackMode = config.pb;
+            if (this.configPlaybackModeSelect) this.configPlaybackModeSelect.value = config.pb;
+        }
+
+        if (config.sse !== undefined) {
+            this.stepSoundEnabled = config.sse === '1' || config.sse === 1;
+            console.log("UI: Applying Step Sound Enabled:", this.stepSoundEnabled);
+            if (this.configStepSoundSelect) this.configStepSoundSelect.value = this.stepSoundEnabled ? 'sound' : 'mute';
+        }
+
+        if (config.gs) {
+            this.seq.noteSpeed = parseFloat(config.gs);
+            if (this.configGameSpeedSlider) this.configGameSpeedSlider.value = config.gs;
+            if (this.configGameSpeedVal) this.configGameSpeedVal.innerText = parseFloat(config.gs).toFixed(1);
+            this.seq.updateScheduleAheadTime();
+        }
+
+        if (config.ob !== undefined) {
+            this.seq.offBeatMode = config.ob === '1' || config.ob === 1;
+            if (this.configOffBeatModeSelect) this.configOffBeatModeSelect.value = this.seq.offBeatMode ? 'on' : 'off';
+        }
+
+        if (config.hc) {
+            this.game.hitCriteria = config.hc;
+            if (this.configHitCriteriaSelect) this.configHitCriteriaSelect.value = config.hc;
+        }
+
+        if (config.hse !== undefined) {
+            this.game.hitSoundEnabled = config.hse === '1' || config.hse === 1;
+            if (this.configHitSoundSelect) this.configHitSoundSelect.value = this.game.hitSoundEnabled ? 'sound' : 'mute';
+        }
+
+        if (config.hst) {
+            console.log("UI: Applying Hit Sound Type:", config.hst);
+            this.game.hitSoundType = config.hst;
+            if (this.configHitSoundTypeSelect) this.configHitSoundTypeSelect.value = config.hst;
+        }
     }
 
     initializeConfigContents() {
@@ -2081,6 +2260,7 @@ class UI {
             this.seq.bpm = num;
             this.seq.updateSettings(num, this.seq.timeSignature);
             this.markDirty();
+            this.saveConfigToFirebase();
 
             const targets = [this.bpmInput, this.bpmNumber, this.configBpmInput, this.configBpmNumber];
             targets.forEach(t => {
@@ -2106,6 +2286,7 @@ class UI {
                 this.seq.audio.masterGain.gain.setTargetAtTime(sliderVal, this.seq.audio.ctx.currentTime, 0.05);
             }
             this.markDirty();
+            this.saveConfigToFirebase();
         };
 
         this.configMasterVol.addEventListener('input', (e) => updateVol(e.target.value, e.target, true));
@@ -2115,6 +2296,7 @@ class UI {
         this.configTimeSigSelect.addEventListener('change', (e) => {
             this.seq.updateSettings(this.seq.bpm, parseInt(e.target.value));
             this.markDirty();
+            this.saveConfigToFirebase();
         });
 
         // Subdivision
@@ -2127,32 +2309,38 @@ class UI {
             });
             this.markDirty();
             this.renderGrid();
+            this.saveConfigToFirebase();
         });
 
         // Playback Mode
         this.configPlaybackModeSelect.addEventListener('change', (e) => {
             this.seq.playbackMode = e.target.value;
             this.markDirty();
+            this.saveConfigToFirebase();
         });
 
         // Step Sound Mode
         this.configOffBeatModeSelect.addEventListener('change', (e) => {
             this.seq.offBeatMode = (e.target.value === 'on');
             this.markDirty();
+            this.saveConfigToFirebase();
         });
 
         this.configHitSoundSelect.addEventListener('change', (e) => {
             this.game.hitSoundEnabled = (e.target.value === 'sound');
             this.markDirty();
+            this.saveConfigToFirebase();
         });
 
         this.configHitSoundTypeSelect.addEventListener('change', (e) => {
             this.game.hitSoundType = e.target.value;
             this.markDirty();
+            this.saveConfigToFirebase();
         });
 
         this.configStepSoundSelect.addEventListener('change', (e) => {
             this.stepSoundEnabled = (e.target.value === 'sound');
+            this.saveConfigToFirebase();
         });
 
         // Notes Reset
@@ -2172,18 +2360,43 @@ class UI {
             this.seq.updateScheduleAheadTime();
             this.configGameSpeedVal.innerText = val.toFixed(1);
             this.markDirty();
+            this.saveConfigToFirebase();
         });
 
         // Hit Criteria
         this.configHitCriteriaSelect.addEventListener('change', (e) => {
             this.game.hitCriteria = e.target.value;
             this.markDirty();
+            this.saveConfigToFirebase();
         });
 
         // Result Reset
         addTapListener(this.configResultResetBtn, () => {
             this.game.resetStats();
         });
+    }
+
+    saveConfigToFirebase() {
+        if (this.isInitializing) return; // Don't save while loading
+        if (this.configSyncTimeout) clearTimeout(this.configSyncTimeout);
+
+        this.configSyncTimeout = setTimeout(() => {
+            const configData = {
+                bpm: parseInt(this.configBpmNumber ? this.configBpmNumber.value : 120),
+                vol: this.configMasterVol ? parseFloat(this.configMasterVol.value) : 0.5,
+                ts: parseInt(this.configTimeSigSelect ? this.configTimeSigSelect.value : 4),
+                sd: parseInt(this.configSubdivSelect ? this.configSubdivSelect.value : 4),
+                pb: this.configPlaybackModeSelect ? this.configPlaybackModeSelect.value : 'stop',
+                sse: this.stepSoundEnabled ? 1 : 0,
+                gs: parseFloat(this.configGameSpeedSlider ? this.configGameSpeedSlider.value : 1.0),
+                ob: this.seq.offBeatMode ? 1 : 0,
+                hc: this.game.hitCriteria,
+                hse: this.game.hitSoundEnabled ? 1 : 0,
+                hst: this.game.hitSoundType
+            };
+            console.log("UI: Syncing config to Firebase (Context:", this.currentShareId || "Default", "):", configData);
+            this.presetManager.saveUserConfig(configData, this.currentShareId);
+        }, 1000); // 1 second debounce (reduced from 2s for better persistence)
     }
 
     markDirty() {
@@ -3482,8 +3695,12 @@ class UI {
 
             // Get sequencer data with UI state
             const extraData = {
+                subdivision: this.configSubdivSelect ? parseInt(this.configSubdivSelect.value) : 4,
+                stepSoundEnabled: this.stepSoundEnabled ? 1 : 0,
                 hitCriteria: this.game.hitCriteria,
-                gameSpeed: this.configGameSpeedVal ? parseFloat(this.configGameSpeedVal.textContent) : 1.0,
+                gameSpeed: this.seq.noteSpeed,
+                hitSoundEnabled: this.game.hitSoundEnabled ? 1 : 0,
+                hitSoundType: this.game.hitSoundType,
                 stepAction: this.stepActionSelect ? this.stepActionSelect.value : 'sel-step',
                 score: this.game.scoreEl ? parseInt(this.game.scoreEl.textContent) : 0,
                 hits: this.game.hitEl ? parseInt(this.game.hitEl.textContent) : 0,
@@ -3520,6 +3737,14 @@ class UI {
             url.search = ''; // Clear existing params
             url.searchParams.set('s', shareId);  // Use 's' for share ID
 
+            // Update current context
+            this.currentShareId = shareId;
+
+            // Update URL in address bar so reload works with the same ID
+            const newUrl = new URL(window.location.href);
+            newUrl.searchParams.set('s', shareId);
+            window.history.replaceState({}, document.title, newUrl.pathname + newUrl.search);
+
             // Display URL
             if (this.shareUrlInput) {
                 this.shareUrlInput.value = url.toString();
@@ -3531,7 +3756,7 @@ class UI {
             if (this.shareUrlInput) {
                 this.shareUrlInput.value = 'Error: Failed to generate URL';
             }
-            alert('Failed to generate share URL');
+            alert('Failed to generate share URL: ' + error.message);
             // Re-enable only on error so they can try again if it failed
             if (this.generateUrlBtn) {
                 this.generateUrlBtn.disabled = false;
@@ -3599,32 +3824,12 @@ class UI {
                     const parsedData = JSON.parse(shareData.dataJson);
                     this.seq.deserialize(parsedData);
 
-                    // Update UI controls
-                    this.bpmInput.value = this.seq.bpm;
-                    if (this.bpmNumber) this.bpmNumber.value = this.seq.bpm;
-                    if (this.configBpmInput) this.configBpmInput.value = this.seq.bpm;
-                    if (this.configBpmNumber) this.configBpmNumber.value = this.seq.bpm;
-                    if (this.configTimeSigSelect) this.configTimeSigSelect.value = this.seq.timeSignature;
-                    if (this.configPlaybackModeSelect) this.configPlaybackModeSelect.value = this.seq.playbackMode;
-
-                    // Restore Config extended data
+                    // Apply full config from share
                     if (parsedData.config) {
-                        if (parsedData.config.masterVolume !== undefined) {
-                            const volPercent = Math.round(parsedData.config.masterVolume * 100);
-                            if (this.configVolNumber) this.configVolNumber.value = volPercent;
-                            if (this.configMasterVol) this.configMasterVol.value = parsedData.config.masterVolume;
-                        }
-                        if (parsedData.config.hitCriteria && this.configHitCriteriaSelect) {
-                            this.configHitCriteriaSelect.value = parsedData.config.hitCriteria;
-                            this.game.hitCriteria = parsedData.config.hitCriteria;
-                        }
-                        if (parsedData.config.gameSpeed && this.configGameSpeedSlider) {
-                            this.configGameSpeedSlider.value = parsedData.config.gameSpeed;
-                            this.configGameSpeedVal.textContent = parsedData.config.gameSpeed.toFixed(1);
-                        }
+                        this.applyConfig(parsedData.config);
                     }
 
-                    // Restore UI state
+                    // Restore Game results
                     if (this.stepActionSelect) {
                         this.stepActionSelect.value = (parsedData.uiState && parsedData.uiState.stepAction && parsedData.uiState.stepAction !== 'toggle')
                             ? parsedData.uiState.stepAction
@@ -3644,14 +3849,14 @@ class UI {
                         if (this.game.comboEl) this.game.comboEl.textContent = this.game.combo;
                     }
 
-                    console.log('Loaded from Firebase share');
+                    console.log('Loading from Firebase share');
                     this.updatePresetPanelVisibility(true);
-                    return;
+                    return true;
                 } else {
                     console.error('Share not found:', shareId);
                     alert('Shared content not found');
                     this.updatePresetPanelVisibility(false);
-                    return;
+                    return false;
                 }
             }
 
@@ -3667,7 +3872,7 @@ class UI {
 
             if (!dataParam) {
                 this.updatePresetPanelVisibility(false);
-                return;
+                return false;
             }
 
             // Decode Base64 (handling Unicode)
@@ -3711,9 +3916,11 @@ class UI {
 
             console.log('Loaded from URL parameters (legacy format)');
             this.updatePresetPanelVisibility(true); // Parameter exists -> Shared Mode
+            return true;
         } catch (error) {
             console.error('Error loading from URL params:', error);
             this.updatePresetPanelVisibility(false); // Parameter absent -> Standard Mode
+            return false;
         }
     }
 
