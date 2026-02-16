@@ -1326,13 +1326,13 @@ class PresetManager {
         // User ID for ownership tracking
         this.userId = null;
 
-        // Local cache for faster UI updates
-        this._presetsCache = null;
-        this._foldersCache = null;
+        // Local cache for faster UI updates (keyed by shareId)
+        this._presetsCache = {}; // { shareId: presets[] }
+        this._foldersCache = {}; // { shareId: folders[] }
 
-        // Caching metadata
-        this._lastPresetsFetch = 0;
-        this._lastFoldersFetch = 0;
+        // Caching metadata (keyed by shareId)
+        this._lastPresetsFetch = {}; // { shareId: timestamp }
+        this._lastFoldersFetch = {}; // { shareId: timestamp }
         this._cacheTTL = 5000; // 5 seconds cache
     }
 
@@ -1344,9 +1344,10 @@ class PresetManager {
 
     // Get all folders (optimized with shareId filter and cache)
     async getFolders(shareId = null) {
+        const key = shareId || 'root';
         const now = Date.now();
-        if (this._foldersCache && (now - this._lastFoldersFetch < this._cacheTTL)) {
-            return this._foldersCache;
+        if (this._foldersCache[key] && (now - (this._lastFoldersFetch[key] || 0) < this._cacheTTL)) {
+            return this._foldersCache[key];
         }
 
         try {
@@ -1362,24 +1363,28 @@ class PresetManager {
 
             const snapshot = await query.get();
             // Sort in memory to avoid index requirements
-            this._foldersCache = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            this._foldersCache.sort((a, b) => {
+            const folders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            folders.sort((a, b) => {
                 const timeA = a.createdAt?.toMillis ? a.createdAt.toMillis() : (a.createdAt || 0);
                 const timeB = b.createdAt?.toMillis ? b.createdAt.toMillis() : (b.createdAt || 0);
                 return timeA - timeB; // Ascending
             });
-            this._lastFoldersFetch = now;
-            return this._foldersCache;
+
+            this._foldersCache[key] = folders;
+            this._lastFoldersFetch[key] = now;
+            return folders;
         } catch (e) {
             console.error('Error loading folders from Firestore:', e);
-            return this._foldersCache || [];
+            return this._foldersCache[key] || [];
         }
     }
 
     // Explicitly clear cache (for force reloads)
     clearCache() {
-        this._lastPresetsFetch = 0;
-        this._lastFoldersFetch = 0;
+        this._lastPresetsFetch = {};
+        this._lastFoldersFetch = {};
+        this._presetsCache = {};
+        this._foldersCache = {};
     }
 
     // Create folder
@@ -1393,7 +1398,8 @@ class PresetManager {
             };
             const docRef = await this.foldersRef.add(folder);
             const created = { id: docRef.id, ...folder, createdAt: new Date().toISOString() };
-            if (this._foldersCache) this._foldersCache.push(created);
+            const key = shareId || 'root';
+            if (this._foldersCache[key]) this._foldersCache[key].push(created);
             this.clearCache();
             return created;
         } catch (e) {
@@ -1406,10 +1412,6 @@ class PresetManager {
     async renameFolder(folderId, newName) {
         try {
             await this.foldersRef.doc(folderId).update({ name: newName });
-            if (this._foldersCache) {
-                const f = this._foldersCache.find(f => f.id === folderId);
-                if (f) f.name = newName;
-            }
             this.clearCache();
         } catch (e) {
             console.error('Error renaming folder:', e);
@@ -1420,9 +1422,6 @@ class PresetManager {
     async deleteFolder(folderId) {
         try {
             await this.foldersRef.doc(folderId).delete();
-            if (this._foldersCache) {
-                this._foldersCache = this._foldersCache.filter(f => f.id !== folderId);
-            }
             this.clearCache();
             // Move presets in this folder to root
             const presetsInFolder = await this.presetsRef.where('folderId', '==', folderId).get();
@@ -1440,9 +1439,10 @@ class PresetManager {
 
     // Get all presets (optimized with shareId filter and cache)
     async getPresets(shareId = null) {
+        const key = shareId || 'root';
         const now = Date.now();
-        if (this._presetsCache && (now - this._lastPresetsFetch < this._cacheTTL)) {
-            return this._presetsCache;
+        if (this._presetsCache[key] && (now - (this._lastPresetsFetch[key] || 0) < this._cacheTTL)) {
+            return this._presetsCache[key];
         }
 
         try {
@@ -1458,22 +1458,24 @@ class PresetManager {
 
             const snapshot = await query.get();
             // Sort in memory to avoid index requirements
-            this._presetsCache = snapshot.docs.map(doc => {
+            const presets = snapshot.docs.map(doc => {
                 const docData = doc.data();
                 // Parse dataJson back to object for use in the app
                 const data = docData.dataJson ? JSON.parse(docData.dataJson) : docData.data;
                 return { id: doc.id, ...docData, data };
             });
-            this._presetsCache.sort((a, b) => {
+            presets.sort((a, b) => {
                 const timeA = a.createdAt?.toMillis ? a.createdAt.toMillis() : (a.createdAt || 0);
                 const timeB = b.createdAt?.toMillis ? b.createdAt.toMillis() : (b.createdAt || 0);
                 return timeB - timeA; // Descending
             });
-            this._lastPresetsFetch = now;
-            return this._presetsCache;
+
+            this._presetsCache[key] = presets;
+            this._lastPresetsFetch[key] = now;
+            return presets;
         } catch (e) {
             console.error('Error loading presets from Firestore:', e);
-            return this._presetsCache || [];
+            return this._presetsCache[key] || [];
         }
     }
 
@@ -1494,7 +1496,6 @@ class PresetManager {
             const docRef = await this.presetsRef.add(preset);
             console.log('DEBUG: Preset saved successfully with ID:', docRef.id);
             const created = { id: docRef.id, name, folderId: folderId || null, shareId: shareId || null, data: sequencerData, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
-            if (this._presetsCache) this._presetsCache.unshift(created);
             // Invalidate cache on mutations
             this.clearCache();
             return created;
@@ -1511,14 +1512,8 @@ class PresetManager {
                 dataJson: JSON.stringify(sequencerData),
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
             });
-            if (this._presetsCache) {
-                const p = this._presetsCache.find(p => p.id === presetId);
-                if (p) {
-                    p.data = sequencerData;
-                    p.updatedAt = new Date().toISOString();
-                }
-            }
             this.clearCache();
+            return true;
         } catch (e) {
             console.error('Error updating preset:', e);
         }
@@ -1568,9 +1563,6 @@ class PresetManager {
     async deletePreset(presetId) {
         try {
             await this.presetsRef.doc(presetId).delete();
-            if (this._presetsCache) {
-                this._presetsCache = this._presetsCache.filter(p => p.id !== presetId);
-            }
             this.clearCache();
         } catch (e) {
             console.error('Error deleting preset:', e);
@@ -3715,7 +3707,7 @@ class UI {
     }
 
     async updateFolderSelect() {
-        const allFolders = await this.presetManager.getFolders();
+        const allFolders = await this.presetManager.getFolders(this.currentShareId);
         // Filter folders by current shareId
         const folders = allFolders.filter(f => (f.shareId || null) === this.currentShareId);
         this.presetFolderSelect.innerHTML = '<option value="">Root（No Project）</option>';
@@ -3737,7 +3729,7 @@ class UI {
         const folderId = this.presetFolderSelect.value || null;
 
         // Check for duplicate name within the same folder
-        const existingPresets = await this.presetManager.getPresets();
+        const existingPresets = await this.presetManager.getPresets(this.currentShareId);
         const existingPreset = existingPresets.find(p =>
             p.name.toLowerCase() === name.toLowerCase() &&
             (p.folderId || null) === folderId
@@ -3820,7 +3812,7 @@ class UI {
         }
         if (this.currentProjectDisplay) {
             if (folderId) {
-                const folders = await this.presetManager.getFolders();
+                const folders = await this.presetManager.getFolders(this.currentShareId);
                 const folder = folders.find(f => f.id === folderId);
                 this.currentProjectDisplay.textContent = folder ? folder.name : 'None';
             } else {
@@ -3849,7 +3841,7 @@ class UI {
         }
 
         // Check for duplicate name within the same shareId context
-        const existingFolders = await this.presetManager.getFolders();
+        const existingFolders = await this.presetManager.getFolders(this.currentShareId);
         const isDuplicate = existingFolders.some(f =>
             f.name.toLowerCase() === name.toLowerCase() &&
             (f.shareId || null) === this.currentShareId
