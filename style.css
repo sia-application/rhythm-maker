@@ -210,6 +210,11 @@ button {
     padding: 6px 12px;
     cursor: pointer;
     -webkit-tap-highlight-color: rgba(0, 242, 255, 0.3);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    font-size: 0.85rem;
 }
 
 .btn-secondary:hover,
@@ -218,10 +223,10 @@ button {
 }
 
 .sync-btn,
+.mute-btn,
 .config-section .input-row button {
     min-width: 140px;
-    text-align: center;
-    justify-content: center;
+    height: 36px;
 }
 
 .btn-text {
@@ -1580,9 +1585,7 @@ main {
 }
 
 .mute-btn {
-    flex: 1;
     cursor: pointer;
-    font-size: 0.85rem;
 }
 
 .mute-btn.active {
@@ -2001,6 +2004,15 @@ main {
         justify-content: center;
         flex-wrap: wrap;
         gap: 10px;
+        width: 100%;
+    }
+
+    .sync-btn,
+    .mute-btn,
+    .config-section .input-row button {
+        min-width: 120px;
+        flex: 1 1 120px;
+        max-width: 200px;
     }
 
     .number-input {
