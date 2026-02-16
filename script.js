@@ -3715,11 +3715,12 @@ class UI {
 
     async updateFolderSelect() {
         console.log("DEBUG: updateFolderSelect started. currentShareId:", this.currentShareId);
-        const allFolders = await this.presetManager.getFolders(this.currentShareId);
+        const targetShareId = this.currentShareId || null;
+        const allFolders = await this.presetManager.getFolders(targetShareId);
         console.log("DEBUG: allFolders received in updateFolderSelect:", allFolders);
 
         // Filter folders by current shareId (double check)
-        const folders = allFolders.filter(f => (f.shareId || null) === this.currentShareId);
+        const folders = allFolders.filter(f => (f.shareId || null) === targetShareId);
         console.log("DEBUG: Filtered folders for dropdown:", folders);
 
         this.presetFolderSelect.innerHTML = '<option value="">Root（No Project）</option>';
