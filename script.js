@@ -1222,6 +1222,11 @@ class PresetManager {
         // Local cache for faster UI updates
         this._presetsCache = null;
         this._foldersCache = null;
+
+        // Caching metadata
+        this._lastPresetsFetch = 0;
+        this._lastFoldersFetch = 0;
+        this._cacheTTL = 5000; // 5 seconds cache
     }
 
     setUserId(uid) {
@@ -1230,16 +1235,44 @@ class PresetManager {
 
     // ==================== FOLDERS ====================
 
-    // Get all folders
-    async getFolders() {
+    // Get all folders (optimized with shareId filter and cache)
+    async getFolders(shareId = null) {
+        const now = Date.now();
+        if (this._foldersCache && (now - this._lastFoldersFetch < this._cacheTTL)) {
+            return this._foldersCache;
+        }
+
         try {
-            const snapshot = await this.foldersRef.orderBy('createdAt', 'asc').get();
+            let query = this.foldersRef;
+
+            // Filter by shareId directly in Firestore for performance
+            if (shareId) {
+                query = query.where('shareId', '==', shareId);
+            } else {
+                // If not in shared mode, explicitly look for null shareId
+                query = query.where('shareId', '==', null);
+            }
+
+            const snapshot = await query.get();
+            // Sort in memory to avoid index requirements
             this._foldersCache = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            this._foldersCache.sort((a, b) => {
+                const timeA = a.createdAt?.toMillis ? a.createdAt.toMillis() : (a.createdAt || 0);
+                const timeB = b.createdAt?.toMillis ? b.createdAt.toMillis() : (b.createdAt || 0);
+                return timeA - timeB; // Ascending
+            });
+            this._lastFoldersFetch = now;
             return this._foldersCache;
         } catch (e) {
             console.error('Error loading folders from Firestore:', e);
             return this._foldersCache || [];
         }
+    }
+
+    // Explicitly clear cache (for force reloads)
+    clearCache() {
+        this._lastPresetsFetch = 0;
+        this._lastFoldersFetch = 0;
     }
 
     // Create folder
@@ -1254,6 +1287,7 @@ class PresetManager {
             const docRef = await this.foldersRef.add(folder);
             const created = { id: docRef.id, ...folder, createdAt: new Date().toISOString() };
             if (this._foldersCache) this._foldersCache.push(created);
+            this.clearCache();
             return created;
         } catch (e) {
             console.error('Error creating folder:', e);
@@ -1269,6 +1303,7 @@ class PresetManager {
                 const f = this._foldersCache.find(f => f.id === folderId);
                 if (f) f.name = newName;
             }
+            this.clearCache();
         } catch (e) {
             console.error('Error renaming folder:', e);
         }
@@ -1281,6 +1316,7 @@ class PresetManager {
             if (this._foldersCache) {
                 this._foldersCache = this._foldersCache.filter(f => f.id !== folderId);
             }
+            this.clearCache();
             // Move presets in this folder to root
             const presetsInFolder = await this.presetsRef.where('folderId', '==', folderId).get();
             const batch = db.batch();
@@ -1295,16 +1331,38 @@ class PresetManager {
 
     // ==================== PRESETS ====================
 
-    // Get all presets
-    async getPresets() {
+    // Get all presets (optimized with shareId filter and cache)
+    async getPresets(shareId = null) {
+        const now = Date.now();
+        if (this._presetsCache && (now - this._lastPresetsFetch < this._cacheTTL)) {
+            return this._presetsCache;
+        }
+
         try {
-            const snapshot = await this.presetsRef.orderBy('createdAt', 'desc').get();
+            let query = this.presetsRef;
+
+            // Filter by shareId directly in Firestore for performance
+            if (shareId) {
+                query = query.where('shareId', '==', shareId);
+            } else {
+                // If not in shared mode, explicitly look for null shareId
+                query = query.where('shareId', '==', null);
+            }
+
+            const snapshot = await query.get();
+            // Sort in memory to avoid index requirements
             this._presetsCache = snapshot.docs.map(doc => {
                 const docData = doc.data();
                 // Parse dataJson back to object for use in the app
                 const data = docData.dataJson ? JSON.parse(docData.dataJson) : docData.data;
                 return { id: doc.id, ...docData, data };
             });
+            this._presetsCache.sort((a, b) => {
+                const timeA = a.createdAt?.toMillis ? a.createdAt.toMillis() : (a.createdAt || 0);
+                const timeB = b.createdAt?.toMillis ? b.createdAt.toMillis() : (b.createdAt || 0);
+                return timeB - timeA; // Descending
+            });
+            this._lastPresetsFetch = now;
             return this._presetsCache;
         } catch (e) {
             console.error('Error loading presets from Firestore:', e);
@@ -1330,6 +1388,8 @@ class PresetManager {
             console.log('DEBUG: Preset saved successfully with ID:', docRef.id);
             const created = { id: docRef.id, name, folderId: folderId || null, shareId: shareId || null, data: sequencerData, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
             if (this._presetsCache) this._presetsCache.unshift(created);
+            // Invalidate cache on mutations
+            this.clearCache();
             return created;
         } catch (e) {
             console.error('ERROR: Failed to save preset to Firestore:', e);
@@ -1351,6 +1411,7 @@ class PresetManager {
                     p.updatedAt = new Date().toISOString();
                 }
             }
+            this.clearCache();
         } catch (e) {
             console.error('Error updating preset:', e);
         }
@@ -1370,6 +1431,7 @@ class PresetManager {
                     p.updatedAt = new Date().toISOString();
                 }
             }
+            this.clearCache();
         } catch (e) {
             console.error('Error renaming preset:', e);
         }
@@ -1389,6 +1451,7 @@ class PresetManager {
                     p.updatedAt = new Date().toISOString();
                 }
             }
+            this.clearCache();
         } catch (e) {
             console.error('Error moving preset:', e);
         }
@@ -1401,6 +1464,7 @@ class PresetManager {
             if (this._presetsCache) {
                 this._presetsCache = this._presetsCache.filter(p => p.id !== presetId);
             }
+            this.clearCache();
         } catch (e) {
             console.error('Error deleting preset:', e);
         }
@@ -3509,9 +3573,8 @@ class UI {
     }
 
     async renderFolderList() {
-        const allFolders = await this.presetManager.getFolders();
-        // Filter folders by current shareId
-        const folders = allFolders.filter(f => (f.shareId || null) === this.currentShareId);
+        const allFolders = await this.presetManager.getFolders(this.currentShareId);
+        const folders = allFolders; // Already filtered by shareId in Firestore
         this.folderList.innerHTML = '';
 
         // "All" option
@@ -3674,12 +3737,10 @@ class UI {
     }
 
     async renderPresetList() {
-        const allPresetsRaw = await this.presetManager.getPresets();
-        const allFolders = await this.presetManager.getFolders();
+        const allPresets = await this.presetManager.getPresets(this.currentShareId);
+        const allFolders = await this.presetManager.getFolders(this.currentShareId);
 
-        // Filter presets and folders by current shareId
-        const allPresets = allPresetsRaw.filter(p => (p.shareId || null) === this.currentShareId);
-        const folders = allFolders.filter(f => (f.shareId || null) === this.currentShareId);
+        const folders = allFolders; // Already filtered by shareId in Firestore
 
         // Filter by selected folder
         let presets;
