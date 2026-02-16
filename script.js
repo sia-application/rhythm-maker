@@ -4261,6 +4261,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     // Proactively check for updates on every load
                     reg.update();
+
+                    // Aggressive Update: Check for updates when the app is focused/resumed
+                    window.addEventListener('focus', () => {
+                        console.log("PWA: App focused, checking for updates...");
+                        reg.update();
+                    });
                 })
                 .catch(err => console.error('PWA: ServiceWorker registration failed: ', err));
         });
