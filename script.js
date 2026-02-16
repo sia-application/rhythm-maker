@@ -413,6 +413,27 @@ class Sequencer {
         }
     }
 
+    moveTrack(barIndex, fromIndex, toIndex) {
+        if (barIndex < 0 || barIndex >= this.bars.length) return;
+        const bar = this.bars[barIndex];
+        if (fromIndex < 0 || fromIndex >= bar.tracks.length) return;
+        if (toIndex < 0 || toIndex >= bar.tracks.length) return;
+        if (fromIndex === toIndex) return;
+
+        const [movedTrack] = bar.tracks.splice(fromIndex, 1);
+        bar.tracks.splice(toIndex, 0, movedTrack);
+    }
+
+    moveTrackGlobal(fromIndex, toIndex) {
+        if (fromIndex === toIndex) return;
+        this.bars.forEach(bar => {
+            if (fromIndex < bar.tracks.length && toIndex < bar.tracks.length) {
+                const [movedTrack] = bar.tracks.splice(fromIndex, 1);
+                bar.tracks.splice(toIndex, 0, movedTrack);
+            }
+        });
+    }
+
     changeTrackType(barIndex, trackIndex, newType) {
         if (barIndex < 0 || barIndex >= this.bars.length) return;
         const bar = this.bars[barIndex];
@@ -3238,10 +3259,89 @@ class UI {
                 // Label
                 const labelCell = document.createElement('div');
                 labelCell.className = 'grid-row-label clickable';
-                labelCell.title = 'Click to open track settings';
-                labelCell.addEventListener('click', () => {
-                    this.openTrackSettings(barIndex, tIndex);
+                labelCell.title = 'Click to open track settings | Drag label to reorder locally | Drag handle to reorder globally';
+
+                // Track Drag and Drop (Local & Global)
+                labelCell.draggable = true;
+
+                let isGlobalGrab = false;
+
+                labelCell.addEventListener('dragstart', (e) => {
+                    e.dataTransfer.setData('application/x-track-reorder', JSON.stringify({
+                        barIndex: barIndex,
+                        trackIndex: tIndex,
+                        isGlobal: isGlobalGrab
+                    }));
+                    e.dataTransfer.effectAllowed = 'move';
+                    labelCell.classList.add('dragging-track');
                 });
+
+                labelCell.addEventListener('dragend', () => {
+                    labelCell.classList.remove('dragging-track');
+                    document.querySelectorAll('.grid-row-label').forEach(el => el.classList.remove('drag-over-track'));
+                });
+
+                labelCell.addEventListener('dragover', (e) => {
+                    if (!e.dataTransfer.types.includes('application/x-track-reorder')) return;
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'move';
+                    labelCell.classList.add('drag-over-track');
+                });
+
+                labelCell.addEventListener('dragleave', () => {
+                    labelCell.classList.remove('drag-over-track');
+                });
+
+                labelCell.addEventListener('drop', (e) => {
+                    const dataStr = e.dataTransfer.getData('application/x-track-reorder');
+                    if (!dataStr) return;
+                    e.preventDefault();
+                    labelCell.classList.remove('drag-over-track');
+
+                    try {
+                        const data = JSON.parse(dataStr);
+                        const fromTrackIndex = data.trackIndex;
+                        const toTrackIndex = tIndex;
+
+                        if (fromTrackIndex === toTrackIndex) return;
+
+                        if (data.isGlobal) {
+                            // Global Move
+                            this.seq.moveTrackGlobal(fromTrackIndex, toTrackIndex);
+                        } else {
+                            // Local Move (Only if in the same bar)
+                            if (data.barIndex === barIndex) {
+                                this.seq.moveTrack(barIndex, fromTrackIndex, toTrackIndex);
+                            } else {
+                                // Optional: Allow moving across bars? The user said "そのBarのTRACKだけ"
+                                // This might mean move from one bar to another, but let's stick to intra-bar local move for now.
+                                return;
+                            }
+                        }
+
+                        this.markDirty();
+                        this.renderGrid();
+                    } catch (err) {
+                        console.error("Track Drop Error", err);
+                    }
+                });
+
+                // Global Drag Handle (6 dots ::)
+                const globalHandle = document.createElement('div');
+                globalHandle.className = 'track-drag-handle';
+                globalHandle.innerHTML = '&#8942;&#8942;'; // ⋮⋮
+                globalHandle.title = 'Drag to reorder across all bars';
+
+                globalHandle.addEventListener('mousedown', () => {
+                    isGlobalGrab = true;
+                });
+                labelCell.addEventListener('mousedown', (e) => {
+                    if (!e.target.closest('.track-drag-handle')) {
+                        isGlobalGrab = false;
+                    }
+                });
+
+                labelCell.appendChild(globalHandle);
 
                 // Track Label Delete Button
                 const delTrackBtn = document.createElement('button');
@@ -3260,15 +3360,21 @@ class UI {
                 const trackNameLabel = document.createElement('span');
                 trackNameLabel.innerText = `Track ${tIndex + 1}`;
                 trackNameLabel.className = 'track-number-label';
+                labelCell.appendChild(trackNameLabel);
 
                 const instNameSub = document.createElement('span');
                 instNameSub.innerText = track.type.toUpperCase();
+                instNameSub.className = 'track-instrument-label';
                 instNameSub.style.fontSize = '0.65rem';
                 instNameSub.style.color = 'var(--primary-color)';
                 instNameSub.style.opacity = '0.8';
-
-                labelCell.appendChild(trackNameLabel);
                 labelCell.appendChild(instNameSub);
+
+                labelCell.addEventListener('click', (e) => {
+                    if (e.target.closest('.track-label-delete') || e.target.closest('.track-drag-handle')) return;
+                    this.openTrackSettings(barIndex, tIndex);
+                });
+
                 systemContainer.appendChild(labelCell);
 
                 // Steps

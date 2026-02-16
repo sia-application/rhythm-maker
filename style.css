@@ -464,6 +464,7 @@ main {
     transition: background 0.2s ease;
     position: relative;
     /* Anchor for delete button */
+    padding-left: 20px;
 }
 
 .track-label-delete {
@@ -1541,6 +1542,41 @@ main {
     display: flex;
     justify-content: center;
     align-items: center;
+}
+
+.grid-row-label.dragging-track {
+    opacity: 0.5;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.grid-row-label.drag-over-track {
+    border-top: 2px solid var(--primary-color);
+}
+
+.track-drag-handle {
+    position: absolute;
+    left: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: grab;
+    padding: 4px;
+    font-size: 1.2rem;
+    color: #8b9bb4;
+    transition: color 0.2s;
+    user-select: none;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2;
+}
+
+.track-drag-handle:hover {
+    color: #fff;
+}
+
+.track-drag-handle:active {
+    cursor: grabbing;
 }
 
 .folder-action-btn:hover {
