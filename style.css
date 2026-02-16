@@ -1579,6 +1579,31 @@ main {
     cursor: grabbing;
 }
 
+.mute-btn {
+    flex: 1;
+    cursor: pointer;
+    font-size: 0.85rem;
+}
+
+.mute-btn.active {
+    background: #ef4444 !important;
+    /* Red for muted */
+    color: white !important;
+    border-color: #fca5a5;
+    box-shadow: 0 0 10px rgba(239, 68, 68, 0.5);
+}
+
+.grid-row-label.muted {
+    opacity: 0.6;
+    background: rgba(239, 68, 68, 0.05);
+    /* Slight red tint */
+}
+
+.grid-row-label.muted .track-instrument-label {
+    color: #ef4444 !important;
+    opacity: 0.6;
+}
+
 .folder-action-btn:hover {
     background: rgba(255, 255, 255, 0.2);
     color: #fff;

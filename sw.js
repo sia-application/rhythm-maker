@@ -1,9 +1,9 @@
-const CACHE_NAME = 'sw-v20';
-const ASSETS = [
+const CACHE_NAME = 'sw-v21';
+const ASSETS_TO_CACHE = [
     './',
     './index.html',
-    './style.css?v=1.4.9',
-    './script.js?v=1.4.9',
+    './style.css?v=1.5.0',
+    './script.js?v=1.5.0',
     './manifest.json',
     './icon-192.png',
     './icon-512.png'
@@ -14,7 +14,7 @@ self.addEventListener('install', (event) => {
     event.waitUntil(
         caches.open(CACHE_NAME).then((cache) => {
             return Promise.all(
-                ASSETS.map((url) => {
+                ASSETS_TO_CACHE.map((url) => {
                     return fetch(new Request(url, { cache: 'reload' })).then((response) => {
                         if (!response.ok) throw new Error(`Fetch failed for ${url}`);
                         return cache.put(url, response);

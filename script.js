@@ -272,6 +272,23 @@ class Sequencer {
         });
     }
 
+    changeTrackMute(barIndex, trackIndex, muted) {
+        if (barIndex < 0 || barIndex >= this.bars.length) return;
+        const bar = this.bars[barIndex];
+        if (trackIndex >= 0 && trackIndex < bar.tracks.length) {
+            bar.tracks[trackIndex].muted = !!muted;
+        }
+    }
+
+    syncTrackMuteAcrossBars(trackIndex, muted) {
+        const boolMuted = !!muted;
+        this.bars.forEach(bar => {
+            if (trackIndex >= 0 && trackIndex < bar.tracks.length) {
+                bar.tracks[trackIndex].muted = boolMuted;
+            }
+        });
+    }
+
     addBar() {
         const barId = this.bars.length;
         const bar = {
@@ -291,7 +308,8 @@ class Sequencer {
             tracksToCopy = lastBar.tracks.map(t => ({
                 type: t.type,
                 volume: t.volume,
-                pan: t.pan
+                pan: t.pan,
+                muted: !!t.muted
             }));
         } else {
             // First bar default
@@ -303,6 +321,7 @@ class Sequencer {
                 type: tInfo.type,
                 volume: tInfo.volume !== undefined ? tInfo.volume : 1.0,
                 pan: tInfo.pan !== undefined ? tInfo.pan : 0,
+                muted: tInfo.muted || false,
                 pattern: []
             };
             // Init pattern for each beat
@@ -349,8 +368,8 @@ class Sequencer {
                 const newTrack = {
                     type: track.type,
                     volume: track.volume,
-                    mute: track.mute,
-                    solo: track.solo,
+                    pan: track.pan !== undefined ? track.pan : 0,
+                    muted: track.muted || false,
                     // Deep copy pattern data
                     pattern: track.pattern.map(beatPattern => [...beatPattern])
                 };
@@ -371,6 +390,8 @@ class Sequencer {
             id: this.nextTrackId++,
             type: useType,
             volume: 1.0,
+            pan: 0,
+            muted: false,
             pattern: []
         };
 
@@ -924,7 +945,7 @@ class Sequencer {
                 // SOUND: SCHEDULING
                 const audioDelay = (time - 0.15 - now) * 1000;
                 const aid = setTimeout(() => {
-                    if (this.isPlaying) {
+                    if (this.isPlaying && track.muted !== true) {
                         this.audio.playInstrument(track.type, time, track.volume, track.pan || 0);
                     }
                 }, Math.max(0, audioDelay));
@@ -1235,6 +1256,7 @@ class Sequencer {
                     type: track.type,
                     volume: track.volume,
                     pan: track.pan,
+                    muted: !!track.muted,
                     pattern: track.pattern.map(beatPattern => [...beatPattern])
                 }))
             }))
@@ -1276,6 +1298,7 @@ class Sequencer {
                         type: trackData.type,
                         volume: trackData.volume !== undefined ? trackData.volume : 1.0,
                         pan: trackData.pan !== undefined ? trackData.pan : 0,
+                        muted: !!trackData.muted,
                         pattern: trackData.pattern.map(bp => [...bp])
                     }))
                 };
@@ -2072,6 +2095,8 @@ class UI {
         this.trackPanNumber = document.getElementById('track-pan-number');
         this.trackPanRange = document.getElementById('track-pan-range');
         this.syncPanAllBtn = document.getElementById('sync-pan-all-btn');
+        this.trackMuteBtn = document.getElementById('track-mute-btn');
+        this.syncMuteAllBtn = document.getElementById('sync-mute-all-btn');
 
         // Track Management (Add/Delete)
         this.trackAddAfterBtn = document.getElementById('track-add-after-btn');
@@ -2730,6 +2755,35 @@ class UI {
             this.saveConfigToFirebase();
         });
 
+        const toggleMute = () => {
+            console.log("UI: Toggle Mute Clicked");
+            if (!this.currentSettingsTrack) return;
+            const { barIndex, trackIndex } = this.currentSettingsTrack;
+            const track = this.seq.bars[barIndex].tracks[trackIndex];
+            const newMuted = !track.muted;
+
+            this.seq.changeTrackMute(barIndex, trackIndex, newMuted);
+
+            this.trackMuteBtn.innerText = newMuted ? "Mute: ON" : "Mute: OFF";
+            this.trackMuteBtn.classList.toggle('active', newMuted);
+
+            this.markDirty();
+            this.renderGrid();
+            this.saveConfigToFirebase();
+        };
+
+        addTapListener(this.trackMuteBtn, toggleMute);
+
+        addTapListener(this.syncMuteAllBtn, () => {
+            if (!this.currentSettingsTrack) return;
+            const { barIndex, trackIndex } = this.currentSettingsTrack;
+            const track = this.seq.bars[barIndex].tracks[trackIndex];
+            this.seq.syncTrackMuteAcrossBars(trackIndex, !!track.muted);
+            this.markDirty();
+            this.renderGrid();
+            this.saveConfigToFirebase();
+        });
+
         this.configStepSoundSelect.addEventListener('change', (e) => {
             this.stepSoundEnabled = (e.target.value === 'sound');
             this.saveConfigToFirebase();
@@ -3258,7 +3312,7 @@ class UI {
             bar.tracks.forEach((track, tIndex) => {
                 // Label
                 const labelCell = document.createElement('div');
-                labelCell.className = 'grid-row-label clickable';
+                labelCell.className = 'grid-row-label clickable' + (track.muted ? ' muted' : '');
                 labelCell.title = 'Click to open track settings | Drag label to reorder locally | Drag handle to reorder globally';
 
                 // Track Drag and Drop (Local & Global)
@@ -3360,6 +3414,13 @@ class UI {
                 const trackNameLabel = document.createElement('span');
                 trackNameLabel.innerText = `Track ${tIndex + 1}`;
                 trackNameLabel.className = 'track-number-label';
+                if (track.muted) {
+                    const muteBadge = document.createElement('span');
+                    muteBadge.innerText = ' [MUTE]';
+                    muteBadge.style.fontSize = '0.6rem';
+                    muteBadge.style.color = '#ef4444';
+                    trackNameLabel.appendChild(muteBadge);
+                }
                 labelCell.appendChild(trackNameLabel);
 
                 const instNameSub = document.createElement('span');
@@ -3424,7 +3485,7 @@ class UI {
                             }
 
                             // Play sound for all selection actions (not just toggle)
-                            if (!this.seq.isPlaying && this.stepSoundEnabled) {
+                            if (!this.seq.isPlaying && this.stepSoundEnabled && track.muted !== true) {
                                 if (!this.seq.audio.isInitialized) this.seq.audio.init();
                                 this.seq.audio.playInstrument(track.type, 0, track.volume);
                             }
@@ -4464,6 +4525,11 @@ class UI {
         const panVal = track.pan !== undefined ? track.pan : 0;
         this.trackPanRange.value = panVal;
         this.trackPanNumber.value = Math.round(panVal * 100);
+
+        // Set Mute
+        const isMuted = !!track.muted;
+        this.trackMuteBtn.innerText = isMuted ? "Mute: ON" : "Mute: OFF";
+        this.trackMuteBtn.classList.toggle('active', isMuted);
 
         // Update Track Management Labels
         const trackCount = bar ? bar.tracks.length : 0;
