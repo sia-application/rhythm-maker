@@ -1347,23 +1347,27 @@ class PresetManager {
         const key = shareId || 'root';
         const now = Date.now();
         if (this._foldersCache[key] && (now - (this._lastFoldersFetch[key] || 0) < this._cacheTTL)) {
+            console.log(`DEBUG: Returning folders from cache for key: ${key}`);
             return this._foldersCache[key];
         }
 
         try {
+            console.log(`DEBUG: Fetching folders from Firestore for key: ${key}`);
             let query = this.foldersRef;
 
-            // Filter by shareId directly in Firestore for performance
+            // PERFORMANCE: If we have a shareId, filter by it directly
             if (shareId) {
                 query = query.where('shareId', '==', shareId);
-            } else {
-                // If not in shared mode, explicitly look for null shareId
-                query = query.where('shareId', '==', null);
             }
+            // NOTE: If shareId is null, we don't query for null because Firestore
+            // might skip documents missing the field entirely. We'll filter in memory.
 
             const snapshot = await query.get();
-            // Sort in memory to avoid index requirements
-            const folders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            const rawFolders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+            // Filter in memory to handle missing fields and nulls consistently
+            const folders = rawFolders.filter(f => (f.shareId || null) === shareId);
+
             folders.sort((a, b) => {
                 const timeA = a.createdAt?.toMillis ? a.createdAt.toMillis() : (a.createdAt || 0);
                 const timeB = b.createdAt?.toMillis ? b.createdAt.toMillis() : (b.createdAt || 0);
@@ -1372,6 +1376,7 @@ class PresetManager {
 
             this._foldersCache[key] = folders;
             this._lastFoldersFetch[key] = now;
+            console.log(`DEBUG: Successfully fetched ${folders.length} folders for key: ${key}`);
             return folders;
         } catch (e) {
             console.error('Error loading folders from Firestore:', e);
@@ -3682,7 +3687,9 @@ class UI {
     }
 
     async openSaveDialog() {
+        console.log("DEBUG: Opening Save Dialog. currentShareId:", this.currentShareId);
         this.presetNameInput.value = '';
+        this.presetManager.clearCache(); // Force fresh fetch
         await this.updateFolderSelect();
 
         // If a specific project is selected in the sidebar, pre-select it in the dialog
@@ -3707,9 +3714,14 @@ class UI {
     }
 
     async updateFolderSelect() {
+        console.log("DEBUG: updateFolderSelect started. currentShareId:", this.currentShareId);
         const allFolders = await this.presetManager.getFolders(this.currentShareId);
-        // Filter folders by current shareId
+        console.log("DEBUG: allFolders received in updateFolderSelect:", allFolders);
+
+        // Filter folders by current shareId (double check)
         const folders = allFolders.filter(f => (f.shareId || null) === this.currentShareId);
+        console.log("DEBUG: Filtered folders for dropdown:", folders);
+
         this.presetFolderSelect.innerHTML = '<option value="">Root（No Project）</option>';
         folders.forEach(folder => {
             const option = document.createElement('option');

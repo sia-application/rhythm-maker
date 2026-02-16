@@ -1,9 +1,9 @@
-const CACHE_NAME = 'sw-v24';
+const CACHE_NAME = 'sw-v25';
 const ASSETS_TO_CACHE = [
     './',
     './index.html',
-    './style.css?v=1.5.3',
-    './script.js?v=1.5.3',
+    './style.css?v=1.5.4',
+    './script.js?v=1.5.4',
     './manifest.json',
     './icon-192.png',
     './icon-512.png'
