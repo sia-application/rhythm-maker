@@ -117,17 +117,24 @@ h1 {
     transform: translateX(-50%);
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 6px 16px;
+    gap: 12px;
+    padding: 6px 20px;
     background: rgba(255, 255, 255, 0.05);
     border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 20px;
-    /* More rounded pill shape */
+    border-radius: 12px;
+    /* More squared-off rounded corners */
     font-size: 0.85rem;
     font-weight: 600;
     pointer-events: none;
     /* Let clicks pass through if needed */
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.info-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
 }
 
 .current-preset-info .info-label {
@@ -140,6 +147,7 @@ h1 {
 .current-preset-info .info-value {
     color: var(--primary-color);
     text-shadow: 0 0 8px var(--primary-glow);
+    font-size: 0.75rem;
 }
 
 .current-preset-info .info-sep {
@@ -1982,6 +1990,8 @@ main {
         margin: 5px 0;
         left: auto;
         order: -1;
+        padding: 8px;
+        gap: 15px;
     }
 
     /* Stack BPM Number/Label above Slider, but keep group inline next to buttons */
