@@ -1854,6 +1854,11 @@ class UI {
         this.countdownOverlay = document.getElementById('countdown-overlay');
         this.countdownNumber = this.countdownOverlay.querySelector('.countdown-number');
 
+        // Initialize step size from CSS to respect media queries (e.g. 30px on mobile, 48px on PC)
+        const initialCSSSize = getComputedStyle(this.grid).getPropertyValue('--step-size');
+        this.currentStepSize = parseFloat(initialCSSSize) || 48;
+        this.sequencerContainer = document.querySelector('.sequencer-container');
+
         // Config Elements
         this.configBtn = document.getElementById('config-btn');
         this.configPanel = document.getElementById('config-panel');
@@ -1975,6 +1980,8 @@ class UI {
         this.setupConfigListeners();
         this.setupShareUrlListeners();
         this.initializeConfigContents();
+
+        this.setupPinchZoom();
 
         // Immediate initial render (ensures app works while Auth/Presets load)
         this.renderGrid();
@@ -2271,6 +2278,50 @@ class UI {
                 this.game.handleInput(-1, e.timeStamp);
             }
         });
+    }
+
+    setupPinchZoom() {
+        if (!this.grid) return;
+
+        let initialDist = 0;
+        let baseStepSize = this.currentStepSize;
+
+        const getDistance = (touches) => {
+            const dx = touches[0].clientX - touches[1].clientX;
+            const dy = touches[0].clientY - touches[1].clientY;
+            return Math.sqrt(dx * dx + dy * dy);
+        };
+
+        this.grid.addEventListener('touchstart', (e) => {
+            if (e.touches.length === 2) {
+                initialDist = getDistance(e.touches);
+                baseStepSize = this.currentStepSize;
+            }
+        }, { passive: true });
+
+        this.grid.addEventListener('touchmove', (e) => {
+            if (e.touches.length === 2) {
+                if (e.cancelable) e.preventDefault();
+
+                const currentDist = getDistance(e.touches);
+                if (initialDist > 0) {
+                    const ratio = currentDist / initialDist;
+                    let newSize = baseStepSize * ratio;
+
+                    // Clamp step size between 8px and 120px
+                    newSize = Math.max(8, Math.min(120, newSize));
+
+                    this.currentStepSize = newSize;
+                    this.grid.style.setProperty('--step-size', `${this.currentStepSize}px`);
+                }
+            }
+        }, { passive: false });
+
+        this.grid.addEventListener('touchend', (e) => {
+            if (e.touches.length < 2) {
+                initialDist = 0;
+            }
+        }, { passive: true });
     }
 
     setupConfigListeners() {
