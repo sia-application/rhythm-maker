@@ -216,6 +216,7 @@ class Sequencer {
         this.timerID = null;
         this.scheduledTimeouts = []; // Track UI and note timeouts
         this.isEndOfProject = false; // Internal flag for 'stop' mode
+        this.soloBarIndex = null;    // If set, only this bar plays
 
         // Initial setup
         this.lastSelectedInstrument = 'metronome';
@@ -828,8 +829,19 @@ class Sequencer {
                 // End of Bar
                 this.currentBeatIndex = 0;
                 this.currentBarIndex++;
-                if (this.currentBarIndex >= this.bars.length) {
-                    // End of Project reached
+
+                // --- SOLO BAR TRANSITION ---
+                if (this.soloBarIndex !== null) {
+                    if (this.playbackMode === 'stop') {
+                        this.isEndOfProject = true;
+                    } else {
+                        // Loop solo bar
+                        this.currentBarIndex = this.soloBarIndex;
+                    }
+                }
+
+                if (this.currentBarIndex >= this.bars.length || (this.soloBarIndex !== null && this.isEndOfProject)) {
+                    // End of Project reached (or end of solo bar)
                     if (this.playbackMode === 'stop') {
                         this.isEndOfProject = true; // Stop scheduling new bars
 
@@ -856,7 +868,7 @@ class Sequencer {
                         return;
                     }
                     // Loop Sequence
-                    this.currentBarIndex = 0;
+                    this.currentBarIndex = this.soloBarIndex !== null ? this.soloBarIndex : 0;
                     this.currentBeatIndex = 0;
                     this.currentStepInBeat = 0;
                 }
@@ -953,6 +965,7 @@ class Sequencer {
 
     play() {
         if (!this.audio.isInitialized) this.audio.init();
+        this.soloBarIndex = null; // Regular play resets solo mode
 
         if (this.isPlaying) {
             // PAUSE
@@ -1010,6 +1023,37 @@ class Sequencer {
                 this.startPlayback(0);
             }
         }
+    }
+
+    /**
+     * Ad-hoc playback of a single bar
+     */
+    playBar(barIndex) {
+        if (!this.audio.isInitialized) this.audio.init();
+        if (barIndex < 0 || barIndex >= this.bars.length) return;
+
+        // --- TOGGLE BEHAVIOR ---
+        if (this.isPlaying && this.soloBarIndex === barIndex) {
+            this.stop();
+            return;
+        }
+
+        // Stop any current playback
+        this.stop();
+
+        // Set solo mode
+        this.soloBarIndex = barIndex;
+
+        // Set starting positions
+        this.currentBarIndex = barIndex;
+        this.currentBeatIndex = 0;
+        this.currentStepInBeat = 0;
+        this.playingBarIndex = barIndex;
+        this.playingBeatIndex = 0;
+        this.playingStepInBeat = 0;
+
+        // Start
+        this.startPlayback(0);
     }
 
     startPlayback(delay = 0, baseTime = null) {
@@ -1090,6 +1134,7 @@ class Sequencer {
         this.playingBarIndex = 0;
         this.playingBeatIndex = 0;
         this.playingStepInBeat = 0;
+        this.soloBarIndex = null; // Clear solo mode
     }
 
     updateSettings(bpm, timeSig) {
@@ -3010,6 +3055,25 @@ class UI {
 
             const labelSpan = document.createElement('span');
             labelSpan.innerText = `Bar ${barIndex + 1}`;
+            labelSpan.style.cursor = 'pointer';
+            labelSpan.style.padding = '2px 6px';
+            labelSpan.style.borderRadius = '4px';
+            labelSpan.style.transition = 'all 0.2s';
+            labelSpan.title = 'Click to play this bar only';
+
+            labelSpan.addEventListener('mouseenter', () => {
+                labelSpan.style.background = 'rgba(255, 255, 255, 0.1)';
+                labelSpan.style.color = '#fff';
+            });
+            labelSpan.addEventListener('mouseleave', () => {
+                labelSpan.style.background = 'transparent';
+                labelSpan.style.color = '#8b9bb4';
+            });
+
+            labelSpan.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.seq.playBar(barIndex);
+            });
             emptyHeader.appendChild(labelSpan);
 
             const nameInput = document.createElement('input');
