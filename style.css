@@ -331,8 +331,9 @@ main {
     gap: 8px;
 }
 
-.number-input {
-    width: 50px;
+.number-input,
+.text-input {
+    width: 60px;
     background: rgba(255, 255, 255, 0.05);
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 4px;
@@ -345,7 +346,13 @@ main {
     transition: all 0.2s;
 }
 
-.number-input:focus {
+.text-input {
+    width: 100%;
+    text-align: left;
+}
+
+.number-input:focus,
+.text-input:focus {
     border-color: var(--primary-color);
     box-shadow: 0 0 8px var(--primary-glow);
 }
@@ -1596,6 +1603,14 @@ main {
     box-shadow: 0 0 10px rgba(239, 68, 68, 0.5);
 }
 
+.track-separator {
+    display: none;
+}
+
+.has-custom-name .track-separator {
+    display: inline;
+}
+
 .grid-row-label.muted {
     opacity: 0.6;
     background: rgba(239, 68, 68, 0.05);
@@ -1933,6 +1948,12 @@ main {
 
 /* Mobile devices */
 @media screen and (max-width: 768px) {
+
+    .has-custom-name .track-prefix,
+    .track-separator {
+        display: none;
+    }
+
     body {
         overflow-x: hidden;
         overflow-y: auto;

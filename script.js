@@ -307,6 +307,7 @@ class Sequencer {
             const lastBar = this.bars[this.bars.length - 1];
             tracksToCopy = lastBar.tracks.map(t => ({
                 type: t.type,
+                name: t.name || '',
                 volume: t.volume,
                 pan: t.pan,
                 muted: !!t.muted
@@ -319,6 +320,7 @@ class Sequencer {
         tracksToCopy.forEach(tInfo => {
             const track = {
                 type: tInfo.type,
+                name: tInfo.name || '',
                 volume: tInfo.volume !== undefined ? tInfo.volume : 1.0,
                 pan: tInfo.pan !== undefined ? tInfo.pan : 0,
                 muted: tInfo.muted || false,
@@ -367,6 +369,7 @@ class Sequencer {
             tracks: originalBar.tracks.map(track => {
                 const newTrack = {
                     type: track.type,
+                    name: track.name || "",
                     volume: track.volume,
                     pan: track.pan !== undefined ? track.pan : 0,
                     muted: track.muted || false,
@@ -389,6 +392,7 @@ class Sequencer {
         const track = {
             id: this.nextTrackId++,
             type: useType,
+            name: '',
             volume: 1.0,
             pan: 0,
             muted: false,
@@ -1254,6 +1258,7 @@ class Sequencer {
                 beats: bar.beats.map(b => ({ subdivision: b.subdivision })),
                 tracks: bar.tracks.map(track => ({
                     type: track.type,
+                    name: track.name || '',
                     volume: track.volume,
                     pan: track.pan,
                     muted: !!track.muted,
@@ -1296,6 +1301,7 @@ class Sequencer {
                     tracks: barData.tracks.map(trackData => ({
                         id: this.nextTrackId++,
                         type: trackData.type,
+                        name: trackData.name || '',
                         volume: trackData.volume !== undefined ? trackData.volume : 1.0,
                         pan: trackData.pan !== undefined ? trackData.pan : 0,
                         muted: !!trackData.muted,
@@ -2101,6 +2107,8 @@ class UI {
         this.syncDeleteAllBtn = document.getElementById('sync-delete-all-btn');
         this.trackAddAfterLabel = document.getElementById('track-add-after-label');
         this.trackDeleteLabel = document.getElementById('track-delete-label');
+        this.trackNameInput = document.getElementById('track-name-input');
+        this.syncNameAllBtn = document.getElementById('sync-name-all-btn');
 
         this.currentSettingsTrack = null; // { barIndex, trackIndex }
 
@@ -2455,6 +2463,35 @@ class UI {
                 this.game.handleInput(-1, e.timeStamp);
             }
         });
+
+        // Track Name Listeners
+        if (this.trackNameInput) {
+            this.trackNameInput.addEventListener('input', (e) => {
+                const { barIndex, trackIndex } = this.currentSettingsTrack;
+                const track = this.seq.bars[barIndex].tracks[trackIndex];
+                track.name = e.target.value;
+                this.markDirty();
+                this.renderGrid();
+            });
+        }
+
+        if (this.syncNameAllBtn) {
+            this.syncNameAllBtn.addEventListener('click', () => {
+                const { barIndex, trackIndex } = this.currentSettingsTrack;
+                const sourceTrack = this.seq.bars[barIndex].tracks[trackIndex];
+                const newName = sourceTrack.name;
+
+                this.seq.bars.forEach(bar => {
+                    if (bar.tracks[trackIndex]) {
+                        bar.tracks[trackIndex].name = newName;
+                    }
+                });
+
+                this.markDirty();
+                this.renderGrid();
+                this.showToast(`Sync naming "${newName}" to all bars`);
+            });
+        }
     }
 
     setupPinchZoom() {
@@ -3409,8 +3446,20 @@ class UI {
                 labelCell.appendChild(delTrackBtn);
 
                 const trackNameLabel = document.createElement('span');
-                trackNameLabel.innerText = `Track ${tIndex + 1}`;
                 trackNameLabel.className = 'track-number-label';
+                labelCell.classList.toggle('has-custom-name', !!track.name);
+
+                const trackPrefix = document.createElement('span');
+                trackPrefix.className = 'track-prefix';
+                trackPrefix.innerText = `TRACK ${tIndex + 1}`;
+
+                const trackSeparator = document.createElement('span');
+                trackSeparator.className = 'track-separator';
+                trackSeparator.innerText = ': ';
+
+                trackNameLabel.appendChild(trackPrefix);
+                trackNameLabel.appendChild(trackSeparator);
+                trackNameLabel.appendChild(document.createTextNode(track.name || ''));
                 if (track.muted) {
                     const muteBadge = document.createElement('span');
                     muteBadge.innerText = ' [MUTE]';
@@ -4535,6 +4584,11 @@ class UI {
         const isMuted = !!track.muted;
         this.trackMuteBtn.innerText = isMuted ? "Mute: ON" : "Mute: OFF";
         this.trackMuteBtn.classList.toggle('active', isMuted);
+
+        // Set Track Name
+        if (this.trackNameInput) {
+            this.trackNameInput.value = track.name || '';
+        }
 
         // Update Track Management Labels
         const trackCount = bar ? bar.tracks.length : 0;
