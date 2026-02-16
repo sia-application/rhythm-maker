@@ -209,6 +209,13 @@ button {
     background: rgba(0, 242, 255, 0.1);
 }
 
+.sync-btn,
+.config-section .input-row button {
+    min-width: 140px;
+    text-align: center;
+    justify-content: center;
+}
+
 .btn-text {
     background: transparent;
     color: var(--text-muted);

@@ -10,7 +10,7 @@
     <link
         href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=Noto+Sans+JP:wght@300;400;700&display=swap"
         rel="stylesheet">
-    <link rel="stylesheet" href="style.css?v=1.4.2">
+    <link rel="stylesheet" href="style.css?v=1.4.8">
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#0f1115">
     <meta name="mobile-web-app-capable" content="yes">
@@ -24,7 +24,7 @@
     <div id="app">
         <header class="app-header">
             <h1 onclick="forceUpdateAndReload()" style="cursor: pointer;">RHYTHM MAKER PRO <span
-                    style="font-size: 14px; font-weight: 400; opacity: 0.7; margin-left: 8px; -webkit-text-fill-color: #aaa; background: none;">v1.4.2</span>
+                    style="font-size: 14px; font-weight: 400; opacity: 0.7; margin-left: 8px; -webkit-text-fill-color: #aaa; background: none;">v1.4.8</span>
             </h1>
             <div class="header-controls">
                 <button id="header-new-project-btn" class="btn-secondary">New Project</button>
@@ -202,6 +202,25 @@
                     </div>
                     <button id="sync-pan-all-btn" class="btn-secondary sync-btn">Apply to all bars</button>
                 </div>
+
+                <div class="config-section">
+                    <h3>TRACK MANAGEMENT</h3>
+                    <div class="config-item">
+                        <label id="track-add-after-label">Add Track After</label>
+                        <div class="input-row">
+                            <button id="track-add-after-btn" class="btn-secondary">Add Track N+1</button>
+                            <button id="sync-add-after-all-btn" class="btn-secondary sync-btn">Apply to all
+                                bars</button>
+                        </div>
+                    </div>
+                    <div class="config-item" style="margin-top: 15px;">
+                        <label id="track-delete-label">Delete This Track</label>
+                        <div class="input-row">
+                            <button id="track-delete-btn" class="btn-secondary">Delete Track N</button>
+                            <button id="sync-delete-all-btn" class="btn-secondary sync-btn">Apply to all bars</button>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
         <div id="track-settings-overlay" class="preset-overlay hidden"></div>
@@ -374,7 +393,7 @@
         }
     </script>
 
-    <script src="script.js?v=1.4.2"></script>
+    <script src="script.js?v=1.4.8"></script>
 </body>
 
 </html>

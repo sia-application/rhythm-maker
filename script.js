@@ -381,6 +381,24 @@ class Sequencer {
         bar.tracks.push(track);
     }
 
+    syncAppendTrackAcrossBars(targetCount, type = null) {
+        const useType = type || this.lastSelectedInstrument;
+        this.bars.forEach((bar, bIdx) => {
+            // Append tracks until the bar has at least targetCount tracks
+            while (bar.tracks.length < targetCount) {
+                this.addTrack(bIdx, useType);
+            }
+        });
+    }
+
+    syncRemoveTrackAcrossBars(trackIndex) {
+        // Iterate backwards through bars and remove the track at trackIndex
+        // Backward iteration is safer when elements might be deleted (though bar.tracks is independent per bar)
+        for (let i = this.bars.length - 1; i >= 0; i--) {
+            this.removeTrack(i, trackIndex);
+        }
+    }
+
     removeTrack(barIndex, trackIndex) {
         if (barIndex < 0 || barIndex >= this.bars.length) return;
         const bar = this.bars[barIndex];
@@ -1989,6 +2007,13 @@ class UI {
         this.trackPanRange = document.getElementById('track-pan-range');
         this.syncPanAllBtn = document.getElementById('sync-pan-all-btn');
 
+        // Track Management (Add/Delete)
+        this.trackAddAfterBtn = document.getElementById('track-add-after-btn');
+        this.syncAddAfterAllBtn = document.getElementById('sync-add-after-all-btn');
+        this.syncDeleteAllBtn = document.getElementById('sync-delete-all-btn');
+        this.trackAddAfterLabel = document.getElementById('track-add-after-label');
+        this.trackDeleteLabel = document.getElementById('track-delete-label');
+
         this.currentSettingsTrack = null; // { barIndex, trackIndex }
 
         // Browser-level unsaved changes warning
@@ -2590,6 +2615,43 @@ class UI {
             if (!this.currentSettingsTrack) return;
             const { barIndex, trackIndex } = this.currentSettingsTrack;
             this.seq.removeTrack(barIndex, trackIndex);
+            this.markDirty();
+            this.renderGrid();
+            this.closeTrackSettings();
+            this.saveConfigToFirebase();
+        });
+
+        addTapListener(this.syncDeleteAllBtn, () => {
+            if (!this.currentSettingsTrack) return;
+            const { trackIndex } = this.currentSettingsTrack;
+            if (confirm(`Delete Track ${trackIndex + 1} from ALL bars?`)) {
+                this.seq.syncRemoveTrackAcrossBars(trackIndex);
+                this.markDirty();
+                this.renderGrid();
+                this.closeTrackSettings();
+                this.saveConfigToFirebase();
+            }
+        });
+
+        addTapListener(this.trackAddAfterBtn, () => {
+            if (!this.currentSettingsTrack) return;
+            const { barIndex } = this.currentSettingsTrack;
+            const type = this.trackInstPanelSelect.value;
+            this.seq.addTrack(barIndex, type);
+            this.markDirty();
+            this.renderGrid();
+            this.closeTrackSettings();
+            this.saveConfigToFirebase();
+        });
+
+        addTapListener(this.syncAddAfterAllBtn, () => {
+            if (!this.currentSettingsTrack) return;
+            const { barIndex } = this.currentSettingsTrack;
+            const currentBar = this.seq.bars[barIndex];
+            if (!currentBar) return;
+            const targetCount = currentBar.tracks.length + 1;
+            const type = this.trackInstPanelSelect.value;
+            this.seq.syncAppendTrackAcrossBars(targetCount, type);
             this.markDirty();
             this.renderGrid();
             this.closeTrackSettings();
@@ -4232,6 +4294,15 @@ class UI {
         const panVal = track.pan !== undefined ? track.pan : 0;
         this.trackPanRange.value = panVal;
         this.trackPanNumber.value = Math.round(panVal * 100);
+
+        // Update Track Management Labels
+        const trackCount = bar ? bar.tracks.length : 0;
+        const nextTrackNum = trackCount + 1;
+
+        if (this.trackAddAfterBtn) this.trackAddAfterBtn.innerText = `Add Track ${nextTrackNum}`;
+        if (this.trackAddAfterLabel) this.trackAddAfterLabel.innerText = `Add New Track (Track ${nextTrackNum})`;
+        if (this.trackDeleteBtn) this.trackDeleteBtn.innerText = `Delete Track ${trackIndex + 1}`;
+        if (this.trackDeleteLabel) this.trackDeleteLabel.innerText = `Delete Track ${trackIndex + 1}`;
 
         // Show Panel
         this.trackSettingsPanel.classList.remove('hidden');
