@@ -1830,18 +1830,21 @@ class RhythmGame {
             // Specific lane hit
             let targetNote = null;
             let minDiff = Infinity;
+            let targetRawDiff = null;
 
             this.activeNotes.forEach(note => {
                 if (note.judged || note.lane !== laneIndex) return;
-                const diff = Math.abs(now - note.targetTime);
+                const rawDiff = now - note.targetTime;
+                const diff = Math.abs(rawDiff);
                 if (diff < minDiff) {
                     minDiff = diff;
                     targetNote = note;
+                    targetRawDiff = rawDiff;
                 }
             });
 
             if (targetNote && minDiff < 350) {
-                this.judgeNote(targetNote, minDiff);
+                this.judgeNote(targetNote, minDiff, targetRawDiff);
             }
 
             // Flash this lane
@@ -1857,10 +1860,11 @@ class RhythmGame {
             // First, prioritize notes very close to the timing (chords)
             this.activeNotes.forEach(note => {
                 if (note.judged) return;
-                const diff = Math.abs(now - note.targetTime);
+                const rawDiff = now - note.targetTime;
+                const diff = Math.abs(rawDiff);
                 if (diff < 150) { // Tight window for direct chord hits
                     if (!handledLanes.has(note.lane)) {
-                        this.judgeNote(note, diff);
+                        this.judgeNote(note, diff, rawDiff);
                         handledLanes.add(note.lane);
                         notesHit++;
                     }
@@ -1871,16 +1875,19 @@ class RhythmGame {
             if (notesHit === 0) {
                 let targetNote = null;
                 let minDiff = Infinity;
+                let targetRawDiff = null;
                 this.activeNotes.forEach(note => {
                     if (note.judged) return;
-                    const diff = Math.abs(now - note.targetTime);
+                    const rawDiff = now - note.targetTime;
+                    const diff = Math.abs(rawDiff);
                     if (diff < minDiff) {
                         minDiff = diff;
                         targetNote = note;
+                        targetRawDiff = rawDiff;
                     }
                 });
                 if (targetNote && minDiff < 350) {
-                    this.judgeNote(targetNote, minDiff);
+                    this.judgeNote(targetNote, minDiff, targetRawDiff);
                 }
             }
 
@@ -1892,12 +1899,20 @@ class RhythmGame {
         }
     }
 
-    judgeNote(note, diff) {
+    judgeNote(note, diff, rawDiff = null) {
         note.judged = true;
         let rating = 'MISS';
         let scoreAdd = 0;
         let ratingClass = 'note-miss';
         let isHit = false;
+
+        let timeDiffStr = null;
+        if (rawDiff !== null && diff !== Infinity) {
+            const sign = rawDiff > 0 ? '+' : '';
+            timeDiffStr = `${sign}${Math.round(rawDiff)}ms`;
+        } else if (diff !== Infinity) {
+            timeDiffStr = `${Math.round(diff)}ms`;
+        }
 
         if (diff <= 50) {
             rating = 'EXCELLENT';
@@ -1939,7 +1954,7 @@ class RhythmGame {
         }
 
         this.score += scoreAdd;
-        this.showJudgment(rating, ratingClass);
+        this.showJudgment(rating, ratingClass, timeDiffStr);
         this.updateUI();
 
         if (note.el && diff !== Infinity) {
@@ -1988,10 +2003,18 @@ class RhythmGame {
         }
     }
 
-    showJudgment(text, className) {
+    showJudgment(text, className, timeDiffStr = null) {
         const el = document.createElement('div');
         el.className = `judgment-float ${className}`;
         el.innerText = text;
+
+        if (timeDiffStr) {
+            const timeEl = document.createElement('div');
+            timeEl.className = 'judgment-time-diff';
+            timeEl.innerText = timeDiffStr;
+            el.appendChild(timeEl);
+        }
+
         this.container.appendChild(el);
         setTimeout(() => el.remove(), 500);
 

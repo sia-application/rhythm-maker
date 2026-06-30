@@ -1168,6 +1168,17 @@ main {
     pointer-events: none;
     animation: judgment-up 0.5s ease-out forwards;
     z-index: 100;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.judgment-time-diff {
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin-top: 5px;
+    text-shadow: none;
+    opacity: 0.9;
 }
 
 @keyframes judgment-up {
